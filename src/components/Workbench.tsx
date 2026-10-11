@@ -94,6 +94,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   const termEndRef = useRef<HTMLDivElement>(null);
+  const termInputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
   const termOutputRef = useRef("");
   const echoRef = useRef<string[]>([]);
@@ -352,7 +353,19 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     const line = inputValue;
     setInputValue("");
     if (awaitingInput) {
-      print([{ kind: "in", text: `› ${line}` }]);
+      // Merge the typed text onto the program's prompt line (like a real
+      // terminal: "What is your name Derek"), instead of a separate line.
+      setTermLines((prev) => {
+        const next = [...prev];
+        for (let i = next.length - 1; i >= 0; i--) {
+          if (next[i].kind === "out" && next[i].text.trim() !== "") {
+            const sep = next[i].text.endsWith(" ") ? "" : " ";
+            next[i] = { ...next[i], text: `${next[i].text}${sep}${line}` };
+            break;
+          }
+        }
+        return next;
+      });
       echoRef.current.push(line);
       roundsRef.current += 1;
       const acc = stdinAccRef.current;
@@ -362,7 +375,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     } else {
       handleCommand(line);
     }
-  }, [awaitingInput, defaultExe, handleCommand, inputValue, print, runWith]);
+  }, [awaitingInput, defaultExe, handleCommand, inputValue, runWith]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -725,7 +738,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
               {writtenFiles.length ? <span className="font-mono text-[10px] text-slate-500">{writtenFiles.length} file(s) written</span> : null}
             </div>
-            <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3">
+            <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3" onClick={() => termInputRef.current?.focus()}>
               <div className="font-mono text-xs leading-relaxed">
                 {termLines.map((line, idx) => (
                   <div
@@ -744,34 +757,31 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   </div>
                 ))}
                 {running ? <p className="animate-pulse text-slate-500">● running…</p> : null}
+                {!running ? (
+                  <form
+                    className="flex items-center gap-1 pt-0.5"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      submitInput();
+                    }}
+                  >
+                    <span className={`shrink-0 font-bold ${awaitingInput ? "animate-pulse text-emerald-400" : "text-indigo-400"}`}>
+                      {awaitingInput ? "›" : `${PROMPT} `}
+                    </span>
+                    <input
+                      key={awaitingInput ? "prog" : "shell"}
+                      ref={termInputRef}
+                      autoFocus
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      aria-label={awaitingInput ? "Type program input" : "Type a terminal command"}
+                      className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
+                    />
+                  </form>
+                ) : null}
                 <div ref={termEndRef} />
               </div>
             </div>
-            <form
-              className="flex items-center gap-2 border-t border-slate-800 p-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!running) submitInput();
-              }}
-            >
-              <span className={`shrink-0 font-mono text-xs font-bold ${awaitingInput ? "animate-pulse text-emerald-400" : "text-indigo-400"}`}>
-                {awaitingInput ? "›" : PROMPT}
-              </span>
-              <input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                disabled={running}
-                placeholder={awaitingInput ? "Program wants input - type it here" : "Type a command (help)…"}
-                className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-emerald-400 disabled:opacity-50"
-              />
-              <button
-                type="submit"
-                disabled={running}
-                className="shrink-0 rounded-md bg-emerald-500 px-3 py-1.5 font-mono text-[11px] font-bold text-slate-900 hover:bg-emerald-400 disabled:opacity-50"
-              >
-                ⏎
-              </button>
-            </form>
           </div>
         </div>
 
