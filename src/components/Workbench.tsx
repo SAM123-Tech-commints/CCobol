@@ -764,45 +764,69 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             </div>
             <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3" onClick={() => termInputRef.current?.focus()}>
               <div className="font-mono text-xs leading-relaxed">
-                {termLines.map((line, idx) => (
-                  <div
-                    key={idx}
-                    className={
-                      line.kind === "in"
-                        ? "whitespace-pre-wrap text-emerald-300"
-                        : line.kind === "err"
-                          ? "whitespace-pre-wrap text-rose-400"
-                          : line.kind === "sys"
-                            ? "whitespace-pre-wrap text-slate-500"
-                            : "whitespace-pre-wrap text-slate-200"
-                    }
-                  >
-                    {line.text === "" ? " " : line.text}
-                  </div>
-                ))}
-                {running ? <p className="animate-pulse text-slate-500">● running…</p> : null}
-                {!running ? (
-                  <form
-                    className="flex items-center gap-1 pt-0.5"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      submitInput();
-                    }}
-                  >
-                    <span className={`shrink-0 font-bold ${awaitingInput ? "animate-pulse text-emerald-400" : "text-indigo-400"}`}>
-                      {awaitingInput ? "›" : `${PROMPT} `}
-                    </span>
-                    <input
-                      key={awaitingInput ? "prog" : "shell"}
-                      ref={termInputRef}
-                      autoFocus
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      aria-label={awaitingInput ? "Type program input" : "Type a terminal command"}
-                      className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
-                    />
-                  </form>
-                ) : null}
+                {(() => {
+                  // When the program is waiting for ACCEPT, render the input
+                  // directly on the program's last output line (VS Code style),
+                  // with no shell prompt in between.
+                  const waiting = awaitingInput && !running;
+                  const lastIdx = termLines.length - 1;
+                  const last = lastIdx >= 0 ? termLines[lastIdx] : null;
+                  const inline = waiting && last?.kind === "out";
+                  const shown = inline && last ? termLines.slice(0, -1) : termLines;
+                  const lineClass = (kind: string) =>
+                    kind === "in"
+                      ? "whitespace-pre-wrap text-emerald-300"
+                      : kind === "err"
+                        ? "whitespace-pre-wrap text-rose-400"
+                        : kind === "sys"
+                          ? "whitespace-pre-wrap text-slate-500"
+                          : "whitespace-pre-wrap text-slate-200";
+                  return (
+                    <>
+                      {shown.map((line, idx) => (
+                        <div key={idx} className={lineClass(line.kind)}>
+                          {line.text === "" ? " " : line.text}
+                        </div>
+                      ))}
+                      {running ? <p className="animate-pulse text-slate-500">● running…</p> : null}
+                      {!running ? (
+                        <form
+                          className={inline ? "flex items-center" : "flex items-center gap-1 pt-0.5"}
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            submitInput();
+                          }}
+                        >
+                          {inline ? (
+                            <>
+                              <span className="whitespace-pre text-slate-200">{last?.text || " "}</span>
+                              <input
+                                ref={termInputRef}
+                                autoFocus
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                aria-label="Type program input"
+                                className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <span className="shrink-0 font-bold text-indigo-400">{`${PROMPT} `}</span>
+                              <input
+                                ref={termInputRef}
+                                autoFocus
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                aria-label="Type a terminal command"
+                                className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
+                              />
+                            </>
+                          )}
+                        </form>
+                      ) : null}
+                    </>
+                  );
+                })()}
                 <div ref={termEndRef} />
               </div>
             </div>
