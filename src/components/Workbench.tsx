@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { highlightCobol } from "@/lib/cobol/highlight";
 import { parseSource } from "@/lib/cobol/units";
+import {
+  DownloadIcon,
+  FileCodeIcon,
+  FileIcon,
+  PencilIcon,
+  PlayIcon,
+  PlusIcon,
+  SaveIcon,
+  UploadIcon,
+  XIcon,
+} from "@/components/icons";
 
 export interface WorkbenchExample {
   id: string;
@@ -192,8 +203,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             setAwaitingInput(true);
           } else {
             setAwaitingInput(false);
-            if (starved) print([{ kind: "sys", text: "■ input limit reached - type 'run' with fewer ACCEPTs, or prefill via a data file." }]);
-            else print([{ kind: "sys", text: `■ '${exe}' exited in ${data.runMs} ms` }]);
+            if (starved) print([{ kind: "sys", text: "input limit reached - type 'run' with fewer ACCEPTs, or prefill via a data file." }]);
+            else print([{ kind: "sys", text: `'${exe}' exited in ${data.runMs} ms` }]);
           }
         }
       } catch (e) {
@@ -557,9 +568,12 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             title={isCobol ? "Compile all .cbl files and run (Ctrl+Enter)" : "Only COBOL programs can run here"}
             className="rounded-lg bg-rose-600 px-4 py-1.5 text-sm font-bold text-white shadow transition hover:bg-rose-500 disabled:opacity-50"
           >
-            {running ? "Running…" : "▶ Run"}
+            <span className="inline-flex items-center gap-1.5">
+              <PlayIcon width={12} height={12} />
+              {running ? "Running…" : "Run"}
+            </span>
           </button>
-          <span className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white">Cobol ▾</span>
+          <span className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white">Cobol</span>
           <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-300">COBOL ONLY</span>
           <select
             onChange={(e) => loadExample(e.target.value)}
@@ -585,7 +599,10 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             disabled={saving}
             className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-indigo-400 hover:text-white disabled:opacity-50"
           >
-            {saving ? "Saving…" : "💾 Save"}
+            <span className="inline-flex items-center gap-1.5">
+              <SaveIcon width={12} height={12} />
+              {saving ? "Saving…" : "Save"}
+            </span>
           </button>
         </div>
 
@@ -597,11 +614,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <div className="flex items-center justify-between px-3 pt-3 pb-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Explorer</p>
                 <div className="flex gap-1">
-                  <button type="button" onClick={() => uploadRef.current?.click()} title="Add files from your computer (.cbl, .dat)" className="rounded px-1.5 text-sm text-slate-400 hover:bg-slate-700 hover:text-white">
-                    ⭳
+                  <button type="button" onClick={() => uploadRef.current?.click()} title="Add files from your computer (.cbl, .dat)" className="flex items-center rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                    <UploadIcon width={14} height={14} />
                   </button>
-                  <button type="button" onClick={addCobolFile} title="New COBOL file" className="rounded px-1.5 text-sm text-slate-400 hover:bg-slate-700 hover:text-white">
-                    ＋
+                  <button type="button" onClick={addCobolFile} title="New COBOL file" className="flex items-center rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                    <PlusIcon width={14} height={14} />
                   </button>
                 </div>
               </div>
@@ -639,10 +656,12 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                           idx === safeActive ? "text-white" : "text-slate-400 hover:text-slate-200"
                         }`}
                       >
-                        <span className={doc.kind === "cobol" ? "text-indigo-400" : "text-amber-400/80"}>{doc.kind === "cobol" ? "≡" : "▤"}</span>
+                        <span className={`shrink-0 ${doc.kind === "cobol" ? "text-indigo-400" : "text-amber-400/80"}`}>
+                          {doc.kind === "cobol" ? <FileCodeIcon width={13} height={13} /> : <FileIcon width={13} height={13} />}
+                        </span>
                         <span className="truncate">{doc.name}</span>
                       </button>
-                      <span className="flex shrink-0 opacity-0 transition group-hover:opacity-100">
+                      <span className="flex shrink-0 items-center opacity-0 transition group-hover:opacity-100">
                         <button
                           type="button"
                           title="Rename"
@@ -650,26 +669,26 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                             setRenaming(doc.name);
                             setRenameDraft(doc.name);
                           }}
-                          className="rounded px-1 text-xs text-slate-500 hover:bg-slate-600 hover:text-white"
+                          className="rounded p-1 text-slate-500 hover:bg-slate-600 hover:text-white"
                         >
-                          ✎
+                          <PencilIcon width={12} height={12} />
                         </button>
                         <button
                           type="button"
                           title={`Download ${doc.name}`}
                           onClick={() => downloadDoc(doc)}
-                          className="rounded px-1 text-xs text-slate-500 hover:bg-slate-600 hover:text-white"
+                          className="rounded p-1 text-slate-500 hover:bg-slate-600 hover:text-white"
                         >
-                          ⭳
+                          <DownloadIcon width={12} height={12} />
                         </button>
                         {(doc.kind === "data" || cobolDocs.length > 1) && (
                           <button
                             type="button"
                             title="Remove"
                             onClick={() => closeDoc(idx)}
-                            className="rounded px-1 text-xs text-slate-500 hover:bg-slate-600 hover:text-white"
+                            className="rounded p-1 text-slate-500 hover:bg-slate-600 hover:text-white"
                           >
-                            ×
+                            <XIcon width={12} height={12} />
                           </button>
                         )}
                       </span>
@@ -679,11 +698,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               </div>
               <div className="flex items-center justify-between px-3 pt-1 pb-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Data files</p>
-                <button type="button" onClick={addDataFile} title="New data file (for SELECT … ASSIGN TO)" className="rounded px-1.5 text-sm text-slate-500 hover:bg-slate-700 hover:text-white">
-                  ＋
+                <button type="button" onClick={addDataFile} title="New data file (for SELECT … ASSIGN TO)" className="flex items-center rounded p-1 text-slate-500 hover:bg-slate-700 hover:text-white">
+                  <PlusIcon width={14} height={14} />
                 </button>
               </div>
-              <p className="px-3 pb-3 text-[11px] leading-relaxed text-slate-600">Tip: double-click a file to rename it. Hover for ✎ rename, ⭳ download.</p>
+              <p className="px-3 pb-3 text-[11px] leading-relaxed text-slate-600">Tip: double-click a file to rename it. Hover a file for rename and download.</p>
             </div>
 
             {/* editor */}
@@ -845,9 +864,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           <li>clear - wipe the terminal</li>
         </ul>
         <p className="mt-2">
-          Explorer: double-click (or ✎) to <strong>rename</strong>, ⭳ to <strong>upload</strong> .cbl/.dat files from your
-          computer, ⭳ per file to <strong>download</strong>. Editing any file un-compiles the program - run{" "}
-          <span className="font-mono">cobc</span> again (just like real GnuCOBOL).
+          Explorer: double-click a file (or the pencil button) to <strong>rename</strong>, use the upload button to add
+          .cbl/.dat files from your computer, and the download button to save any file. Editing any file un-compiles the
+          program - run <span className="font-mono">cobc</span> again (just like real GnuCOBOL).
         </p>
       </details>
     </div>

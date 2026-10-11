@@ -44,14 +44,14 @@ export default function ResumeBar({ lessons }: { lessons: { slug: string; title:
             href={`/learn/${nextUp.slug}`}
             className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-500"
           >
-            {lastLesson ? "Resume →" : "Start →"}
+              {lastLesson ? "Resume" : "Start"}
           </Link>
         ) : (
           <Link
             href="/exercises"
             className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700"
           >
-            Practice exercises →
+            Practice exercises
           </Link>
         )}
       </div>

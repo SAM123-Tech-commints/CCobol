@@ -92,13 +92,13 @@ export default function ChallengeCard({ challenge }: { challenge: Challenge }) {
           disabled={check.status === "checking"}
           className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
         >
-          {check.status === "checking" ? "Checking…" : "✓ Check my code"}
+          {check.status === "checking" ? "Checking…" : "Check my code"}
         </button>
         <Link
           href={compilerLink(code, challenge.stdin ?? "")}
           className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-indigo-400 hover:text-indigo-700"
         >
-          Open in compiler →
+          Open in compiler
         </Link>
       </div>
     </div>

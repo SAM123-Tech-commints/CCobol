@@ -1,10 +1,10 @@
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
-import { BookIcon, CodeIcon, LogoMark, QuizIcon, TerminalIcon } from "@/components/icons";
+import { BookIcon, CodeIcon, GraduationCapIcon, LogoMark, QuizIcon, TerminalIcon } from "@/components/icons";
 
 /** One navbar everywhere: pinned while scrolling, identical on every page. */
-export default function Navbar({ active }: { active?: "tutorials" | "exercises" | "quiz" | "compiler" }) {
-  const item = (id: "tutorials" | "exercises" | "quiz", href: string, label: string, Icon: typeof BookIcon) =>
+export default function Navbar({ active }: { active?: "tutorials" | "school" | "exercises" | "quiz" | "compiler" }) {
+  const item = (id: "tutorials" | "school" | "exercises" | "quiz", href: string, label: string, Icon: typeof BookIcon) =>
     active === id ? (
       <span key={id} className="flex items-center gap-1.5 rounded-full bg-indigo-600/10 px-3 py-1 text-indigo-700 dark:bg-indigo-500/15 dark:text-[#4fc1ff]">
         <Icon width={14} height={14} />
@@ -26,6 +26,7 @@ export default function Navbar({ active }: { active?: "tutorials" | "exercises" 
         </Link>
         <nav className="flex items-center gap-1 text-sm font-medium sm:gap-4">
           {item("tutorials", "/", "Tutorials", BookIcon)}
+          <span className="hidden sm:inline">{item("school", "/school", "School", GraduationCapIcon)}</span>
           <span className="hidden sm:inline">{item("exercises", "/exercises", "Exercises", CodeIcon)}</span>
           <span className="hidden sm:inline">{item("quiz", "/quiz", "Quizzes", QuizIcon)}</span>
           {active === "compiler" ? (

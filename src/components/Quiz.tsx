@@ -116,7 +116,7 @@ export default function Quiz({ slug }: { slug: string }) {
             onClick={next}
             className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
           >
-            {index + 1 >= quiz.questions.length ? "See results" : "Next question →"}
+            {index + 1 >= quiz.questions.length ? "See results" : "Next question"}
           </button>
         </div>
       ) : null}

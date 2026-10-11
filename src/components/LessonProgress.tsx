@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { isLessonDone, markLessonDone, unmarkLessonDone } from "@/lib/progress";
+import { CheckIcon } from "@/components/icons";
 
 /** "Mark as complete" toggle + persisted state (feeds homepage XP/progress). */
 export default function LessonProgress({ slug }: { slug: string }) {
@@ -33,7 +34,8 @@ export default function LessonProgress({ slug }: { slug: string }) {
         done ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200" : "bg-slate-900 text-white hover:bg-slate-700"
       }`}
     >
-      {done ? "✓ Completed - click to undo" : "Mark lesson complete (+20 XP)"}
+      {done ? "Completed - click to undo" : "Mark lesson complete (+20 XP)"}
+      {done ? <CheckIcon width={12} height={12} className="ml-1.5 inline" /> : null}
     </button>
   );
 }

@@ -93,7 +93,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           <div className="mt-10 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
             <h2 className="text-lg font-bold text-slate-900">Try it in the compiler</h2>
             <p className="mt-1 text-sm text-slate-600">
-              Every runnable example in this lesson can be executed straight away - press the ▶ Run button on any COBOL block.
+              Every runnable example in this lesson can be executed straight away - press the Run button on any COBOL block.
               The example below already has the data this lesson needs attached.
             </p>
             <div className="mt-3">

@@ -37,10 +37,10 @@ export default function ProgressStrip({ totalLessons, totalChallenges }: { total
         </div>
         <div className="flex gap-2">
           <Link href="/exercises" className="rounded-xl bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20">
-            Practice →
+            Practice
           </Link>
           <Link href="/quiz" className="rounded-xl bg-white/10 px-4 py-2 font-semibold text-white hover:bg-white/20">
-            Quizzes →
+            Quizzes
           </Link>
         </div>
       </div>

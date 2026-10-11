@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { highlightCobol } from "@/lib/cobol/highlight";
+import { PlayIcon } from "@/components/icons";
 
 interface Props {
   code: string;
@@ -54,9 +55,10 @@ export default function CodeBlock({ code, lang = "cobol", runnable, stdin, files
             <button
               type="button"
               onClick={run}
-              className="rounded-md bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-slate-900 transition hover:bg-emerald-400"
+              className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-slate-900 transition hover:bg-emerald-400"
             >
-              ▶ Run
+              <PlayIcon width={10} height={10} />
+              Run
             </button>
           ) : null}
         </div>
