@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Navbar from "@/components/Navbar";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { snippets } from "@/db/schema";
@@ -75,28 +75,7 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
 
   return (
     <main className="min-h-screen bg-slate-100">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <div>
-            <Link href="/" className="text-lg font-extrabold tracking-tight text-slate-900">
-              COBOL<span className="text-indigo-600">.</span>dev
-            </Link>
-            <p className="text-xs text-slate-500">Online COBOL compiler & tutorial</p>
-          </div>
-          <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link href="/" className="text-slate-600 hover:text-indigo-700">
-              Tutorials
-            </Link>
-            <Link href="/exercises" className="text-slate-600 hover:text-indigo-700">
-              Exercises
-            </Link>
-            <Link href="/quiz" className="text-slate-600 hover:text-indigo-700">
-              Quizzes
-            </Link>
-            <span className="rounded-full bg-indigo-600/10 px-3 py-1 text-indigo-700">Compiler · COBOL only</span>
-          </nav>
-        </div>
-      </header>
+      <Navbar active="compiler" />
 
       <section className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">

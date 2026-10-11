@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Markdown from "@/components/Markdown";
 import CodeBlock from "@/components/CodeBlock";
 import Quiz from "@/components/Quiz";
+import Navbar from "@/components/Navbar";
 import LessonProgress from "@/components/LessonProgress";
 import SavePosition from "@/components/SavePosition";
 import SidebarNav from "@/components/SidebarNav";
@@ -35,27 +36,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
   return (
     <main className="min-h-screen bg-white">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <Link href="/" className="text-lg font-extrabold tracking-tight text-slate-900">
-            COBOL<span className="text-indigo-600">.</span>dev
-          </Link>
-          <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link href="/" className="text-slate-600 hover:text-indigo-700">
-              Tutorials
-            </Link>
-            <Link href="/exercises" className="hidden text-slate-600 hover:text-indigo-700 sm:inline">
-              Exercises
-            </Link>
-            <Link href="/quiz" className="hidden text-slate-600 hover:text-indigo-700 sm:inline">
-              Quizzes
-            </Link>
-            <Link href="/compiler" className="rounded-full bg-indigo-600 px-3.5 py-1.5 text-white hover:bg-indigo-500">
-              Compiler
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <Navbar active="tutorials" />
 
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="hidden lg:block">

@@ -18,7 +18,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-white text-slate-900 antialiased">{children}</body>
+      <head>
+        {/* Apply the saved theme before paint to avoid a flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('cobol-theme');if(t!=='light'){document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();",
+          }}
+        />
+      </head>
+      <body className="bg-white text-slate-900 antialiased dark:bg-[#1e1e1e] dark:text-[#d4d4d4]">{children}</body>
     </html>
   );
 }

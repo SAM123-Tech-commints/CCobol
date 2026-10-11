@@ -1,11 +1,18 @@
 @import "tailwindcss";
 
+/* class-based dark mode (toggled on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 pre,
@@ -37,14 +44,161 @@ input.font-mono {
   font-style: italic;
 }
 
-/* thin scrollbars inside the dark code panels */
+/* thin scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent;
+}
+.dark * {
+  scrollbar-color: #3c3c3c transparent;
+}
 pre::-webkit-scrollbar,
-textarea::-webkit-scrollbar {
+textarea::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
   height: 10px;
   width: 10px;
 }
 pre::-webkit-scrollbar-thumb,
-textarea::-webkit-scrollbar-thumb {
-  background: #334155;
+textarea::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #94a3b8;
   border-radius: 999px;
+}
+.dark pre::-webkit-scrollbar-thumb,
+.dark textarea::-webkit-scrollbar-thumb,
+.dark .overflow-auto::-webkit-scrollbar-thumb,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #3c3c3c;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dark theme (VS Code Dark+ palette) for the light Tailwind pages.   */
+/* The compiler/IDE panes are already dark and are left untouched.    */
+/* ------------------------------------------------------------------ */
+.dark {
+  color-scheme: dark;
+}
+.dark body {
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+.dark .bg-white {
+  background-color: #252526;
+}
+.dark .bg-white\/95 {
+  background-color: rgba(30, 30, 30, 0.95);
+}
+.dark .bg-slate-50 {
+  background-color: #1e1e1e;
+}
+.dark .bg-slate-100 {
+  background-color: #2d2d2d;
+}
+.dark .bg-slate-200 {
+  background-color: #37373d;
+}
+.dark .bg-slate-800\/60 {
+  background-color: rgba(45, 45, 45, 0.6);
+}
+.dark .bg-indigo-50 {
+  background-color: #23394f;
+}
+.dark .bg-indigo-50\/60 {
+  background-color: rgba(35, 57, 79, 0.6);
+}
+.dark .bg-indigo-100 {
+  background-color: #26435e;
+}
+.dark .bg-emerald-50 {
+  background-color: #1d3b2f;
+}
+.dark .bg-rose-50 {
+  background-color: #3b2022;
+}
+.dark .bg-amber-50 {
+  background-color: #3a3320;
+}
+.dark .bg-emerald-100 {
+  background-color: #1d3b2f;
+}
+.dark .border-slate-100 {
+  border-color: #333333;
+}
+.dark .border-slate-200 {
+  border-color: #3c3c3c;
+}
+.dark .border-slate-300 {
+  border-color: #3c3c3c;
+}
+.dark .border-indigo-100 {
+  border-color: #2b4a63;
+}
+.dark .border-indigo-200 {
+  border-color: #2b4a63;
+}
+.dark .border-emerald-200 {
+  border-color: #2f5c48;
+}
+.dark .border-rose-200 {
+  border-color: #5c3336;
+}
+.dark .border-amber-200 {
+  border-color: #5c5333;
+}
+.dark .text-slate-900 {
+  color: #e8e8e8;
+}
+.dark .text-slate-800 {
+  color: #dcdcdc;
+}
+.dark .text-slate-700 {
+  color: #cfcfcf;
+}
+.dark .text-slate-600 {
+  color: #b8b8b8;
+}
+.dark .text-slate-500 {
+  color: #9a9a9a;
+}
+.dark .text-slate-400 {
+  color: #818181;
+}
+.dark .text-indigo-600,
+.dark .text-indigo-700,
+.dark .text-indigo-800 {
+  color: #4fc1ff;
+}
+.dark .text-emerald-700,
+.dark .text-emerald-800 {
+  color: #4ec9b0;
+}
+.dark .text-rose-700,
+.dark .text-rose-800 {
+  color: #f14c4c;
+}
+.dark .text-amber-800 {
+  color: #d7ba7d;
+}
+.dark .hover\:bg-slate-50:hover {
+  background-color: #2d2d2d;
+}
+.dark .hover\:bg-slate-100:hover {
+  background-color: #2d2d2d;
+}
+.dark .hover\:text-slate-900:hover,
+.dark .hover\:text-slate-800:hover {
+  color: #ffffff;
+}
+.dark .hover\:text-indigo-700:hover,
+.dark .hover\:text-indigo-800:hover {
+  color: #9cdcfe;
+}
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  --tw-shadow-color: rgba(0, 0, 0, 0.5);
 }

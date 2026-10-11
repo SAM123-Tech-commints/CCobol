@@ -100,6 +100,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const echoRef = useRef<string[]>([]);
   const roundsRef = useRef(0);
   const stdinAccRef = useRef(initialStdin || "");
+  const prefillRef = useRef(initialStdin || "");
   const writtenRef = useRef<Record<string, string>>({});
   const compiledRef = useRef<string | null>(null);
   const MAX_INTERACTIVE_ROUNDS = 12;
@@ -145,6 +146,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       if (fresh) {
         roundsRef.current = 0;
         echoRef.current = [];
+        // Fresh run restarts input from the prefill (shared/example stdin),
+        // so old typed lines never leak into the new execution.
+        stdinAccRef.current = prefillRef.current;
         termOutputRef.current = "";
         setResult(null);
       }
@@ -412,6 +416,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     setTitle(example.name);
     setResult(null);
     setShareUrl(null);
+    prefillRef.current = example.stdin ?? "";
     stdinAccRef.current = example.stdin ?? "";
     resetTerminal(`Loaded '${example.name}' - compile it:  cobc -x -free ${example.id}.cbl`);
   };
