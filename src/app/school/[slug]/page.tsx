@@ -3,6 +3,8 @@ import Navbar from "@/components/Navbar";
 import Quiz from "@/components/Quiz";
 import CodeBlock from "@/components/CodeBlock";
 import ScrollToTop from "@/components/ScrollToTop";
+import VideoPlayer from "@/components/VideoPlayer";
+import { videoFor } from "@/content/videos";
 import { CodingSheetDiagram, CustomerInfoTree, StructureHierarchyDiagram } from "@/components/SchoolDiagrams";
 import { getSchoolLesson, getSchoolNeighbours, schoolLessons } from "@/content/school";
 
@@ -86,6 +88,16 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
             </ol>
           </div>
         ) : null}
+
+        {/* Video lecture with chapter timeline (add yours in src/content/videos.ts) */}
+        {(() => {
+          const video = videoFor(slug);
+          return video ? (
+            <div className="mt-6">
+              <VideoPlayer source={video} />
+            </div>
+          ) : null;
+        })()}
 
         <div className="mt-8 space-y-10">
           {lesson.sections.map((s, idx) => {
