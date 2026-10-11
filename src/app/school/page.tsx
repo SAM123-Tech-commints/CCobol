@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Quiz from "@/components/Quiz";
+import VideoPlayer from "@/components/VideoPlayer";
 import { GraduationCapIcon } from "@/components/icons";
 import { schoolLessons } from "@/content/school";
+import { videoFor } from "@/content/videos";
 
 export const metadata = {
   title: "1st Semester COBOL - School Tutorial (Lessons 1-4)",
@@ -11,6 +13,7 @@ export const metadata = {
 };
 
 export default function SchoolIndexPage() {
+  const video = videoFor("school");
   return (
     <main className="min-h-screen bg-white dark:bg-[#1e1e1e]">
       <Navbar active="school" />
@@ -29,6 +32,12 @@ export default function SchoolIndexPage() {
           followed by an <span className="rounded bg-sky-100 px-1.5 py-0.5 font-medium text-sky-800 dark:bg-sky-500/10 dark:text-sky-300">explanation in simpler words</span>.
           Finish each lesson with a quiz on the exact terms your teacher uses.
         </p>
+
+        {video ? (
+          <div className="mt-8">
+            <VideoPlayer source={video} />
+          </div>
+        ) : null}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {schoolLessons.map((lesson) => (

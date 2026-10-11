@@ -48,7 +48,8 @@ export default function VideoPlayer({ source }: { source: LessonVideo }) {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  const isYouTube = source.provider === "youtube" && source.youtubeId;
+  const isYouTube = source.provider === "youtube" && Boolean(source.youtubeId);
+  const isDrive = source.provider === "drive" && Boolean(source.driveId);
 
   // Create the YouTube player.
   useEffect(() => {
@@ -125,6 +126,14 @@ export default function VideoPlayer({ source }: { source: LessonVideo }) {
       <div className="relative aspect-video w-full bg-black">
         {isYouTube ? (
           <div id={containerId} className="absolute inset-0 h-full w-full" />
+        ) : isDrive && source.driveId ? (
+          <iframe
+            src={`https://drive.google.com/file/d/${source.driveId}/preview`}
+            title={source.title ?? "Video lecture"}
+            allow="autoplay; fullscreen"
+            allowFullScreen
+            className="absolute inset-0 h-full w-full border-0"
+          />
         ) : source.src ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
           <video
@@ -194,23 +203,42 @@ export default function VideoPlayer({ source }: { source: LessonVideo }) {
       {/* chapter list */}
       {source.chapters.length ? (
         <div className="px-4 pb-4 pt-3">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Chapters - click to jump</p>
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            {isDrive ? "Chapters - seek manually in the player (Drive)" : "Chapters - click to jump"}
+          </p>
+          {isDrive ? (
+            <p className="mb-2 text-[11px] leading-relaxed text-slate-500">
+              Google Drive does not let the website jump inside its player, so these are reference timestamps. Want
+              click-to-jump chapters? Upload the same video to YouTube (unlisted) or archive.org and switch the
+              provider in <span className="font-mono">src/content/videos.ts</span>.
+            </p>
+          ) : null}
           <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-            {source.chapters.map((c, i) => (
-              <button
-                key={`${c.time}-${c.label}`}
-                type="button"
-                onClick={() => seekTo(c.time)}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition ${
-                  i === activeChapter
-                    ? "border-indigo-400 bg-indigo-500/20 font-semibold text-white"
-                    : "border-slate-700 bg-slate-800/60 text-slate-300 hover:border-indigo-400/50 hover:text-white"
-                }`}
-              >
-                <span className="shrink-0 rounded bg-slate-700 px-1.5 py-0.5 font-mono text-[10px] text-indigo-300">{fmt(c.time)}</span>
-                <span className="min-w-0 truncate">{c.label}</span>
-              </button>
-            ))}
+            {source.chapters.map((c, i) =>
+              isDrive ? (
+                <div
+                  key={`${c.time}-${c.label}`}
+                  className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs text-slate-300"
+                >
+                  <span className="shrink-0 rounded bg-slate-700 px-1.5 py-0.5 font-mono text-[10px] text-indigo-300">{fmt(c.time)}</span>
+                  <span className="min-w-0 truncate">{c.label}</span>
+                </div>
+              ) : (
+                <button
+                  key={`${c.time}-${c.label}`}
+                  type="button"
+                  onClick={() => seekTo(c.time)}
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition ${
+                    i === activeChapter
+                      ? "border-indigo-400 bg-indigo-500/20 font-semibold text-white"
+                      : "border-slate-700 bg-slate-800/60 text-slate-300 hover:border-indigo-400/50 hover:text-white"
+                  }`}
+                >
+                  <span className="shrink-0 rounded bg-slate-700 px-1.5 py-0.5 font-mono text-[10px] text-indigo-300">{fmt(c.time)}</span>
+                  <span className="min-w-0 truncate">{c.label}</span>
+                </button>
+              ),
+            )}
           </div>
         </div>
       ) : null}
