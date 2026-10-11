@@ -9,6 +9,7 @@ import SavePosition from "@/components/SavePosition";
 import SidebarNav from "@/components/SidebarNav";
 import ModuleBar from "@/components/ModuleBar";
 import ChallengeCard from "@/components/ChallengeCard";
+import ScrollToTop from "@/components/ScrollToTop";
 import { challenges } from "@/content/challenges";
 import { getLesson, getLessonNeighbours, lessons, modules } from "@/content";
 
@@ -159,6 +160,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           </div>
         </article>
       </div>
+      <ScrollToTop />
     </main>
   );
 }

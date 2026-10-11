@@ -197,6 +197,14 @@ export function GraduationCapIcon(props: IconProps) {
   );
 }
 
+export function ArrowUpIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </svg>
+  );
+}
+
 /** COBOL.dev brand mark. */
 export function LogoMark({ size = 26, className = "" }: { size?: number; className?: string }) {
   return (
