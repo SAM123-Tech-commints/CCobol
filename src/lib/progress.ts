@@ -5,6 +5,7 @@
 const LESSONS_KEY = "cobol-done-lessons";
 const QUIZ_KEY = "cobol-quiz-best";
 const CHALLENGE_KEY = "cobol-done-challenges";
+const LAST_KEY = "cobol-last-lesson";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -58,6 +59,15 @@ export function saveQuizBest(slug: string, pct: number) {
 
 export function getDoneChallenges(): string[] {
   return readJson<string[]>(CHALLENGE_KEY, []);
+}
+
+/** Last lesson the learner opened - used for "continue where you left off". */
+export function getLastLesson(): string | null {
+  return readJson<string | null>(LAST_KEY, null);
+}
+
+export function setLastLesson(slug: string) {
+  writeJson(LAST_KEY, slug);
 }
 
 export function markChallengeDone(id: string) {

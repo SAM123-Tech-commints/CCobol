@@ -4,6 +4,9 @@ import Markdown from "@/components/Markdown";
 import CodeBlock from "@/components/CodeBlock";
 import Quiz from "@/components/Quiz";
 import LessonProgress from "@/components/LessonProgress";
+import SavePosition from "@/components/SavePosition";
+import SidebarNav from "@/components/SidebarNav";
+import ModuleBar from "@/components/ModuleBar";
 import ChallengeCard from "@/components/ChallengeCard";
 import { challenges } from "@/content/challenges";
 import { getLesson, getLessonNeighbours, lessons, modules } from "@/content";
@@ -56,32 +59,10 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
-          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-auto pr-2">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">COBOL Tutorial</p>
-            <nav className="space-y-4">
-              {modules.map((module) => (
-                <div key={module.name}>
-                  <p className="mb-1 text-[13px] font-semibold text-slate-800">{module.name}</p>
-                  <ul className="space-y-0.5 border-l border-slate-200 pl-3">
-                    {module.lessons.map((item) => (
-                      <li key={item.slug}>
-                        <Link
-                          href={`/learn/${item.slug}`}
-                          className={`block rounded px-2 py-1 text-[13px] leading-snug transition ${
-                            item.slug === lesson.slug
-                              ? "bg-indigo-50 font-semibold text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                          }`}
-                        >
-                          {item.title}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </nav>
-          </div>
+          <SidebarNav
+            current={slug}
+            modules={modules.map((m) => ({ name: m.name, lessons: m.lessons.map((l) => ({ slug: l.slug, title: l.title })) }))}
+          />
         </aside>
 
         <article className="min-w-0">
@@ -103,6 +84,10 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           </div>
           <div className="mt-4">
             <LessonProgress slug={slug} />
+          </div>
+          <SavePosition slug={slug} />
+          <div className="mt-3 max-w-xs">
+            <ModuleBar slugs={lessons.map((l) => l.slug)} />
           </div>
 
           <div className="mt-6 border-y border-slate-100 py-2 text-sm">

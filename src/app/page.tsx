@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { snippets } from "@/db/schema";
 import CodeBlock from "@/components/CodeBlock";
 import ProgressStrip from "@/components/ProgressStrip";
+import ResumeBar from "@/components/ResumeBar";
+import ModuleBar from "@/components/ModuleBar";
 import { lessons, modules } from "@/content";
 import { examples } from "@/content/examples";
 import { challenges } from "@/content/challenges";
@@ -114,6 +116,7 @@ export default async function HomePage() {
       </section>
 
       <ProgressStrip totalLessons={lessons.length} totalChallenges={challenges.length} />
+      <ResumeBar lessons={lessons.map((l) => ({ slug: l.slug, title: l.title }))} />
 
       {/* how you learn: SoloLearn + Programming Hub + Programiz style */}
       <section className="mx-auto max-w-7xl px-4 py-14">
@@ -153,6 +156,7 @@ export default async function HomePage() {
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">{module.name}</h3>
               </div>
+              <ModuleBar slugs={module.lessons.map((l) => l.slug)} />
               <ul className="mt-3 space-y-1.5">
                 {module.lessons.map((lesson) => (
                   <li key={lesson.slug}>
