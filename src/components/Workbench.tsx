@@ -239,12 +239,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
   const shellRun = useCallback(
     (exe: string) => {
-      if (compiledRef.current !== exe) {
+      const compiled = compiledRef.current;
+      if (!compiled || compiled.toLowerCase() !== exe.toLowerCase()) {
         print([{ kind: "err", text: `bash: ./${exe}: No such file. Compile first:  cobc -x -free <file>.cbl -o ${exe}` }]);
         return;
       }
-      print([{ kind: "sys", text: `$ ./${exe}` }]);
-      void runWith(stdinAccRef.current, true, exe);
+      print([{ kind: "sys", text: `$ ./${compiled}` }]);
+      void runWith(stdinAccRef.current, true, compiled);
     },
     [print, runWith],
   );
@@ -323,7 +324,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           print([{ kind: "err", text: `cobc: error: ${missing.asked}: No such file. 'ls' to list files.` }]);
           return;
         }
-        print([{ kind: "sys", text: `$ cobc ${args.join(" ") || "-x -free " + cobolDocs.map((d) => d.name).join(" ")}` }]);
         compileDocs(targets.map((t) => t.doc as DocFile), exe);
         return;
       }
@@ -336,7 +336,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         return;
       }
       if (cmd.startsWith("./")) {
-        shellRun(cmd.slice(2));
+        shellRun(parts[0].slice(2));
         return;
       }
       if (cmd === "exit" || cmd === "quit") {
