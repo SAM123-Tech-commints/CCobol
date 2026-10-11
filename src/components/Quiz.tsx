@@ -4,6 +4,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { quizFor, type QuizQuestion } from "@/content/quizzes";
 import { bankFor, type EnumQuestion, type TermPair, type TFQuestion } from "@/content/quizbank";
 import { getQuizBest, markLessonDone, saveQuizBest } from "@/lib/progress";
+import { CheckIcon, XIcon } from "@/components/icons";
+
+/** Each matched pair locks in its own color so connections are visible. */
+const PAIR_COLORS = [
+  { chip: "border-indigo-400 bg-indigo-100 text-indigo-900", dot: "bg-indigo-500", dark: "dark:border-indigo-400/50 dark:bg-indigo-500/15 dark:text-indigo-200" },
+  { chip: "border-emerald-400 bg-emerald-100 text-emerald-900", dot: "bg-emerald-500", dark: "dark:border-emerald-400/50 dark:bg-emerald-500/15 dark:text-emerald-200" },
+  { chip: "border-amber-400 bg-amber-100 text-amber-900", dot: "bg-amber-500", dark: "dark:border-amber-400/50 dark:bg-amber-500/15 dark:text-amber-200" },
+  { chip: "border-rose-400 bg-rose-100 text-rose-900", dot: "bg-rose-500", dark: "dark:border-rose-400/50 dark:bg-rose-500/15 dark:text-rose-200" },
+  { chip: "border-sky-400 bg-sky-100 text-sky-900", dot: "bg-sky-500", dark: "dark:border-sky-400/50 dark:bg-sky-500/15 dark:text-sky-200" },
+  { chip: "border-violet-400 bg-violet-100 text-violet-900", dot: "bg-violet-500", dark: "dark:border-violet-400/50 dark:bg-violet-500/15 dark:text-violet-200" },
+];
 
 export type QuizMode = "mc" | "ident" | "match" | "tf" | "enum" | "mixed";
 
@@ -71,7 +82,11 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
   const [identHints, setIdentHints] = useState(0);
   const [tfPicked, setTfPicked] = useState<boolean | null>(null);
   const [enumText, setEnumText] = useState("");
-  const [matchSel, setMatchSel] = useState<Record<string, string>>({});
+  // matching: click-to-pair with colors
+  const [matchPick, setMatchPick] = useState<{ side: "term" | "def"; value: string } | null>(null);
+  const [matchLocked, setMatchLocked] = useState<Record<string, number>>({}); // term -> color index
+  const [matchWrong, setMatchWrong] = useState<Record<string, boolean>>({}); // term -> had a wrong attempt
+  const [matchFlash, setMatchFlash] = useState<{ term: string; def: string } | null>(null);
   const [feedback, setFeedback] = useState<{ ok: boolean; detail: string } | null>(null);
   const [best, setBest] = useState<number | null>(null);
 
@@ -125,7 +140,10 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
     setIdentHints(0);
     setTfPicked(null);
     setEnumText("");
-    setMatchSel({});
+    setMatchPick(null);
+    setMatchLocked({});
+    setMatchWrong({});
+    setMatchFlash(null);
     setFeedback(null);
   };
 
@@ -175,11 +193,53 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
     );
   };
 
-  const gradeMatch = () => {
-    if (!current || current.t !== "match") return;
-    const correct = current.data.filter((p) => norm(matchSel[p.term] ?? "") === norm(p.def)).length;
-    const score = current.data.length ? correct / current.data.length : 0;
-    grade(score, correct === current.data.length, `${correct} of ${current.data.length} pairs correct.`);
+  /** Matching: lock a term+definition pair. Correct pairs take the next
+   *  palette color; wrong pairs flash red and count against first-try. */
+  const attemptMatchPair = (term: string, def: string) => {
+    if (!current || current.t !== "match" || feedback) return;
+    if (matchLocked[term] !== undefined) return; // already locked
+    const pair = current.data.find((p) => p.term === term);
+    if (pair && norm(pair.def) === norm(def)) {
+      const colorIdx = Object.keys(matchLocked).length % PAIR_COLORS.length;
+      const nextLocked = { ...matchLocked, [term]: colorIdx };
+      setMatchLocked(nextLocked);
+      setMatchPick(null);
+      if (Object.keys(nextLocked).length === current.data.length) {
+        // All pairs matched - grade automatically.
+        const firstTry = current.data.filter((p) => !matchWrong[p.term]).length;
+        const score = current.data.length ? firstTry / current.data.length : 0;
+        const wrongs = current.data.length - firstTry;
+        grade(
+          score,
+          wrongs === 0,
+          wrongs === 0
+            ? `Perfect matching - all ${current.data.length} pairs on the first try.`
+            : `Matched all ${current.data.length} pairs - ${firstTry} on the first try, ${wrongs} after a wrong attempt.`,
+        );
+      }
+    } else {
+      setMatchWrong((w) => ({ ...w, [term]: true }));
+      setMatchFlash({ term, def });
+      setMatchPick(null);
+      setTimeout(() => setMatchFlash(null), 700);
+    }
+  };
+
+  const onTermClick = (term: string) => {
+    if (feedback || matchLocked[term] !== undefined) return;
+    if (matchPick?.side === "def") attemptMatchPair(term, matchPick.value);
+    else setMatchPick({ side: "term", value: term });
+  };
+
+  const onDefClick = (def: string) => {
+    if (feedback) return;
+    // A definition already used by a locked pair cannot be picked again.
+    const used =
+      current?.t === "match" &&
+      current.data.some((p) => matchLocked[p.term] !== undefined && norm(p.def) === norm(def));
+    if (used) return;
+    if (matchPick?.side === "term") attemptMatchPair(matchPick.value, def);
+    else setMatchPick({ side: "def", value: def });
   };
 
   const next = () => {
@@ -278,15 +338,32 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
   }
 
   const feedbackBox = feedback ? (
-    <div className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 text-sm dark:bg-slate-800">
-      <p className={feedback.ok ? "font-semibold text-emerald-700 dark:text-emerald-400" : "font-semibold text-rose-700 dark:text-rose-400"}>
+    <div
+      className={`mt-3 rounded-xl border px-3.5 py-3 text-sm ${
+        feedback.ok
+          ? "border-emerald-200 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-500/10"
+          : "border-rose-200 bg-rose-50 dark:border-rose-400/30 dark:bg-rose-500/10"
+      }`}
+    >
+      <p
+        className={`flex items-center gap-1.5 font-semibold ${
+          feedback.ok ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"
+        }`}
+      >
+        <span
+          className={`flex h-5 w-5 items-center justify-center rounded-full text-white ${
+            feedback.ok ? "bg-emerald-500" : "bg-rose-500"
+          }`}
+        >
+          {feedback.ok ? <CheckIcon width={12} height={12} /> : <XIcon width={12} height={12} />}
+        </span>
         {feedback.ok ? "Correct!" : "Not quite."}
       </p>
-      <p className="mt-0.5 text-slate-600 dark:text-slate-300">{feedback.detail}</p>
+      <p className="mt-1 text-slate-600 dark:text-slate-300">{feedback.detail}</p>
       <button
         type="button"
         onClick={next}
-        className="mt-3 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+        className="mt-3 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
       >
         {index + 1 >= total ? "See results" : "Next"}
       </button>
@@ -452,42 +529,87 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
           </>
         ) : null}
 
-        {/* MATCHING */}
+        {/* MATCHING - click a term, then its definition (or the other way). */}
         {current.t === "match" ? (
           <>
             <p className="mt-4 text-[15px] font-semibold text-slate-900 dark:text-white">
               Match each term to its definition ({current.data.length} pairs)
             </p>
-            <div className="mt-3 space-y-2">
-              {current.data.map((pair) => (
-                <div key={pair.term} className="grid gap-2 sm:grid-cols-[170px_minmax(0,1fr)]">
-                  <span className="rounded-lg bg-indigo-50 px-3 py-2 font-mono text-xs font-bold text-indigo-800 dark:bg-indigo-500/10 dark:text-[#9cdcfe]">
-                    {pair.term}
-                  </span>
-                  <select
-                    value={matchSel[pair.term] ?? ""}
-                    onChange={(e) => setMatchSel((s) => ({ ...s, [pair.term]: e.target.value }))}
-                    disabled={feedback !== null}
-                    className="rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-700 outline-none focus:border-indigo-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-                  >
-                    <option value="">— choose the definition —</option>
-                    {matchOptions.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ))}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Click a term, then its definition (or the other way around). Correct pairs lock in{" "}
+              <span className="font-semibold text-indigo-600 dark:text-[#4fc1ff]">their own color</span>; wrong picks flash red.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {/* terms column */}
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Terms</p>
+                {current.data.map((pair) => {
+                  const locked = matchLocked[pair.term];
+                  const isSel = matchPick?.side === "term" && matchPick.value === pair.term;
+                  const isFlash = matchFlash?.term === pair.term;
+                  const color = locked !== undefined ? PAIR_COLORS[locked % PAIR_COLORS.length] : null;
+                  return (
+                    <button
+                      key={pair.term}
+                      type="button"
+                      onClick={() => onTermClick(pair.term)}
+                      disabled={feedback !== null || locked !== undefined}
+                      className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left font-mono text-xs font-bold transition ${
+                        color
+                          ? `${color.chip} ${color.dark} cursor-default`
+                          : isFlash
+                            ? "border-rose-500 bg-rose-50 text-rose-700 dark:border-rose-400/60 dark:bg-rose-500/10 dark:text-rose-300"
+                            : isSel
+                              ? "border-indigo-500 bg-indigo-50 text-indigo-900 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#252526]"
+                              : "cursor-pointer border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:border-indigo-400"
+                      }`}
+                    >
+                      {color ? (
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${color.dot}`} aria-hidden />
+                      ) : null}
+                      <span className="flex-1">{pair.term}</span>
+                      {color ? <CheckIcon width={14} height={14} /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* definitions column */}
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Definitions</p>
+                {matchOptions.map((def) => {
+                  const isSel = matchPick?.side === "def" && matchPick.value === def;
+                  const isFlash = matchFlash?.def === def;
+                  const usedBy =
+                    current.t === "match"
+                      ? current.data.find((p) => matchLocked[p.term] !== undefined && norm(p.def) === norm(def))
+                      : undefined;
+                  const color = usedBy ? PAIR_COLORS[matchLocked[usedBy.term] % PAIR_COLORS.length] : null;
+                  return (
+                    <button
+                      key={def}
+                      type="button"
+                      onClick={() => onDefClick(def)}
+                      disabled={feedback !== null || Boolean(usedBy)}
+                      className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-xs leading-snug transition ${
+                        color
+                          ? `${color.chip} ${color.dark} cursor-default`
+                          : isFlash
+                            ? "border-rose-500 bg-rose-50 text-rose-700 dark:border-rose-400/60 dark:bg-rose-500/10 dark:text-rose-300"
+                            : isSel
+                              ? "border-indigo-500 bg-indigo-50 text-slate-800 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#252526]"
+                              : "cursor-pointer border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:border-indigo-400"
+                      }`}
+                    >
+                      {color ? (
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${color.dot}`} aria-hidden />
+                      ) : null}
+                      <span className="flex-1">{def}</span>
+                      {color ? <CheckIcon width={14} height={14} /> : null}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={gradeMatch}
-              disabled={feedback !== null || current.data.some((p) => !matchSel[p.term])}
-              className="mt-3 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
-            >
-              Check matches
-            </button>
           </>
         ) : null}
 

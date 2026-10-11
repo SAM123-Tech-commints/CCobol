@@ -120,6 +120,15 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     termEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [termLines, awaitingInput, running]);
 
+  // Guarantee the cursor lands in the program-input field the moment the
+  // program starts waiting for ACCEPT (VS Code behaviour).
+  useEffect(() => {
+    if (awaitingInput && !running) {
+      const t = setTimeout(() => termInputRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [awaitingInput, running]);
+
   const safeActive = Math.min(active, docs.length - 1);
   const activeDoc = docs[safeActive];
 
@@ -765,14 +774,27 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3" onClick={() => termInputRef.current?.focus()}>
               <div className="font-mono text-xs leading-relaxed">
                 {(() => {
-                  // When the program is waiting for ACCEPT, render the input
-                  // directly on the program's last output line (VS Code style),
-                  // with no shell prompt in between.
+                  // VS Code-style input: when the program waits for ACCEPT, the
+                  // cursor sits directly at the end of the program's last
+                  // non-empty output line - no shell prompt, no blank line.
                   const waiting = awaitingInput && !running;
-                  const lastIdx = termLines.length - 1;
-                  const last = lastIdx >= 0 ? termLines[lastIdx] : null;
-                  const inline = waiting && last?.kind === "out";
-                  const shown = inline && last ? termLines.slice(0, -1) : termLines;
+
+                  // Find the anchor: the last non-empty output line. Skip any
+                  // trailing blank lines the engine's trailing newline created.
+                  let anchorIdx = -1;
+                  if (waiting) {
+                    for (let i = termLines.length - 1; i >= 0; i--) {
+                      const l = termLines[i];
+                      if (l.kind === "out" && l.text.trim() === "") continue; // trailing blank
+                      anchorIdx = i;
+                      break;
+                    }
+                  }
+                  const anchor = anchorIdx >= 0 ? termLines[anchorIdx] : null;
+                  const inline = waiting && anchor?.kind === "out";
+                  // While waiting, don't render the skipped trailing blanks.
+                  const shown = waiting && anchorIdx >= 0 ? termLines.slice(0, anchorIdx + 1) : termLines;
+
                   const lineClass = (kind: string) =>
                     kind === "in"
                       ? "whitespace-pre-wrap text-emerald-300"
@@ -781,6 +803,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                         : kind === "sys"
                           ? "whitespace-pre-wrap text-slate-500"
                           : "whitespace-pre-wrap text-slate-200";
+
                   return (
                     <>
                       {shown.map((line, idx) => (
@@ -789,39 +812,46 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                         </div>
                       ))}
                       {running ? <p className="animate-pulse text-slate-500">● running…</p> : null}
-                      {!running ? (
+                      {!running && waiting ? (
+                        // Program input: typed characters appear right on the
+                        // program's own prompt line (or a bare line if it
+                        // printed nothing before ACCEPT).
                         <form
-                          className={inline ? "flex items-center" : "flex items-center gap-1 pt-0.5"}
+                          className={inline ? "flex items-center" : "flex items-center"}
                           onSubmit={(e) => {
                             e.preventDefault();
                             submitInput();
                           }}
                         >
-                          {inline ? (
-                            <>
-                              <span className="whitespace-pre text-slate-200">{last?.text || " "}</span>
-                              <input
-                                ref={termInputRef}
-                                autoFocus
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                aria-label="Type program input"
-                                className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
-                              />
-                            </>
-                          ) : (
-                            <>
-                              <span className="shrink-0 font-bold text-indigo-400">{`${PROMPT} `}</span>
-                              <input
-                                ref={termInputRef}
-                                autoFocus
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                aria-label="Type a terminal command"
-                                className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
-                              />
-                            </>
-                          )}
+                          {inline ? <span className="whitespace-pre text-slate-200">{anchor?.text}</span> : null}
+                          <input
+                            ref={termInputRef}
+                            autoFocus
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            aria-label="Type program input"
+                            placeholder={inline ? undefined : "Type input, Enter to send"}
+                            className="min-w-[80px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none placeholder:text-slate-600"
+                          />
+                        </form>
+                      ) : !running ? (
+                        // Shell mode: commands typed at the cobol-dev:~$ prompt.
+                        <form
+                          className="flex items-center gap-1 pt-0.5"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            submitInput();
+                          }}
+                        >
+                          <span className="shrink-0 font-bold text-indigo-400">{`${PROMPT} `}</span>
+                          <input
+                            ref={termInputRef}
+                            autoFocus
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            aria-label="Type a terminal command"
+                            className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
+                          />
                         </form>
                       ) : null}
                     </>
