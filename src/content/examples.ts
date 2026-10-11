@@ -335,6 +335,109 @@ PROCEDURE DIVISION USING LS-VAR1 LS-VAR2.
 END PROGRAM SubProg.
 `,
   },
+  {
+    id: "evaluate",
+    name: "EVALUATE Grades",
+    description: "Multi-way branching like switch/case",
+    code: `       IDENTIFICATION DIVISION.
+       PROGRAM-ID. EvalDemo.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 SCORE                PIC 9(3) VALUE 85.
+       PROCEDURE DIVISION.
+           EVALUATE TRUE
+               WHEN SCORE >= 90
+                   DISPLAY 'GRADE A'
+               WHEN SCORE >= 75
+                   DISPLAY 'GRADE B'
+               WHEN SCORE >= 50
+                   DISPLAY 'GRADE C'
+               WHEN OTHER
+                   DISPLAY 'GRADE F'
+           END-EVALUATE.
+           STOP RUN.
+`,
+  },
+  {
+    id: "paragraphs",
+    name: "Paragraphs & PERFORM",
+    description: "Split logic into paragraphs and call them",
+    code: `       IDENTIFICATION DIVISION.
+       PROGRAM-ID. ParaDemo.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 WS-NAME              PIC X(10) VALUE 'Ada'.
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           DISPLAY 'START'.
+           PERFORM GREET.
+           PERFORM FAREWELL.
+           DISPLAY 'END'.
+           STOP RUN.
+       GREET.
+           DISPLAY 'HELLO ' WS-NAME.
+       FAREWELL.
+           DISPLAY 'GOODBYE ' WS-NAME.
+`,
+  },
+  {
+    id: "compute",
+    name: "COMPUTE Expressions",
+    description: "Formulas with parentheses and functions",
+    code: `       IDENTIFICATION DIVISION.
+       PROGRAM-ID. ComputeDemo.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 A                    PIC 9(3) VALUE 10.
+       01 B                    PIC 9(3) VALUE 4.
+       01 C                    PIC 9(5)V99 VALUE 0.
+       PROCEDURE DIVISION.
+           COMPUTE C = (A + B) * 2 - 5.
+           DISPLAY 'C = ' C.
+           COMPUTE C = FUNCTION SQRT(16).
+           DISPLAY 'SQRT(16) = ' C.
+           STOP RUN.
+`,
+  },
+  {
+    id: "filewrite",
+    name: "Write then Read a File",
+    description: "Create NOTES.DAT and read it back",
+    code: `       IDENTIFICATION DIVISION.
+       PROGRAM-ID. FileDemo.
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT NOTES-FILE ASSIGN TO 'NOTES.DAT'
+           ORGANIZATION IS SEQUENTIAL.
+       DATA DIVISION.
+       FILE SECTION.
+       FD NOTES-FILE.
+       01 NOTE-RECORD          PIC X(20).
+       WORKING-STORAGE SECTION.
+       01 END-OF-FILE          PIC X(1) VALUE 'N'.
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           OPEN OUTPUT NOTES-FILE.
+           MOVE 'FIRST LINE' TO NOTE-RECORD.
+           WRITE NOTE-RECORD.
+           MOVE 'SECOND LINE' TO NOTE-RECORD.
+           WRITE NOTE-RECORD.
+           CLOSE NOTES-FILE.
+           OPEN INPUT NOTES-FILE.
+           READ NOTES-FILE
+               AT END MOVE 'Y' TO END-OF-FILE
+           END-READ.
+           PERFORM UNTIL END-OF-FILE = 'Y'
+               DISPLAY NOTE-RECORD
+               READ NOTES-FILE
+                   AT END MOVE 'Y' TO END-OF-FILE
+               END-READ
+           END-PERFORM.
+           CLOSE NOTES-FILE.
+           STOP RUN.
+`,
+  },
 ];
 
 export function getExample(id: string): Example | undefined {

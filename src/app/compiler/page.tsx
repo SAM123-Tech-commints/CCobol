@@ -75,7 +75,7 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
 
   return (
     <main className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <Link href="/" className="text-lg font-extrabold tracking-tight text-slate-900">
@@ -103,12 +103,12 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Online COBOL Compiler</h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Write, compile and run <strong>COBOL only</strong> in a real terminal in your browser - no installation,
-              no sign-up. Press <em>Run</em> and the program executes on the right; when it reaches{" "}
-              <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">ACCEPT</code>, it pauses and you type
-              your input live, just like a console. You can also prefill the <em>Input</em> tab, and use the{" "}
-              <em>Data files</em> tab for <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">SELECT</code>
-              ed files. Other languages are rejected - GnuCOBOL-compatible COBOL and nothing else.
+              A VS Code-style <strong>COBOL-only</strong> terminal in your browser - no installation, no sign-up.
+              Type <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">cobc -x -free prog.cbl</code> to
+              compile (real syntax errors, GnuCOBOL-style), then <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">./prog</code> to
+              run and type live input when <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">ACCEPT</code> asks.
+              Manage <strong>.cbl + data files</strong> in the explorer: rename, upload, download. Other languages are
+              rejected - GnuCOBOL-compatible COBOL and nothing else.
             </p>
           </div>
         </div>
