@@ -103,11 +103,12 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Online COBOL Compiler</h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Write, compile and run <strong>COBOL only</strong> in your browser - no installation, no sign-up. Press{" "}
-              <em>Run</em> and the program is checked and executed immediately. Use the <em>Input</em> tab for{" "}
-              <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">ACCEPT</code> and the <em>Data files</em>{" "}
-              tab for <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">SELECT</code>ed files. Other
-              languages are rejected - this compiler accepts GnuCOBOL-compatible COBOL and nothing else.
+              Write, compile and run <strong>COBOL only</strong> in a real terminal in your browser - no installation,
+              no sign-up. Press <em>Run</em> and the program executes on the right; when it reaches{" "}
+              <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">ACCEPT</code>, it pauses and you type
+              your input live, just like a console. You can also prefill the <em>Input</em> tab, and use the{" "}
+              <em>Data files</em> tab for <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">SELECT</code>
+              ed files. Other languages are rejected - GnuCOBOL-compatible COBOL and nothing else.
             </p>
           </div>
         </div>

@@ -185,7 +185,7 @@ export default async function HomePage() {
               sequential / relative / indexed files, <span className="font-mono text-slate-100">CALL</span> between programs and intrinsic functions.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-slate-300">
-              <li>✓ stdin for <span className="font-mono">ACCEPT</span></li>
+              <li>✓ interactive terminal - type live input when <span className="font-mono">ACCEPT</span> asks</li>
               <li>✓ data files for <span className="font-mono">SELECT … ASSIGN TO</span>, plus a tab showing the files your program writes</li>
               <li>✓ compiler-style error messages with line numbers</li>
               <li>✓ save &amp; share a permanent link to your program</li>

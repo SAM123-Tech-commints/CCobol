@@ -51,10 +51,24 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [outputTab, setOutputTab] = useState<"output" | "written">("output");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Interactive terminal state: program output accumulates here, and when the
+  // program hits ACCEPT with no stdin left, we prompt for live input instead.
+  const [termLines, setTermLines] = useState<{ kind: "out" | "in" | "sys"; text: string }[]>([]);
+  const [awaitingInput, setAwaitingInput] = useState(false);
+  const [inputValue, setInputValue] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
+  const termEndRef = useRef<HTMLDivElement>(null);
+  const termOutputRef = useRef("");
+  const echoRef = useRef<string[]>([]);
+  const roundsRef = useRef(0);
+  const MAX_INTERACTIVE_ROUNDS = 12;
+
+  useEffect(() => {
+    termEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [termLines, awaitingInput, running]);
 
   const highlighted = useMemo(() => highlightCobol(code), [code]);
   const lineCount = useMemo(() => code.split("\n").length, [code]);
@@ -63,43 +77,106 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     return upper.includes("IDENTIFICATION DIVISION") || upper.includes("PROCEDURE DIVISION");
   }, [code]);
 
-  const run = useCallback(async () => {
-    if (!isCobol) {
-      setError(null);
-      setResult({
-        output: "",
-        fileOutput: {},
-        errors: ["Only COBOL is supported here. Your program must contain an IDENTIFICATION DIVISION and a PROCEDURE DIVISION."],
-        warnings: [],
-        runMs: 0,
-      });
-      return;
-    }
-    setRunning(true);
-    setError(null);
-    try {
-      const payload = {
-        code,
-        stdin,
-        files: Object.fromEntries(files.map((f) => [f.name, contentOf(f)])),
-      };
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = (await res.json()) as RunResult & { error?: string };
-      if (data.error) setError(data.error);
-      else {
-        setResult(data);
-        setOutputTab(Object.keys(data.fileOutput ?? {}).length ? "written" : "output");
+  const STARVED_MARKER = "past the end of the standard input";
+
+  /** Execute the program. fresh=true resets the terminal; otherwise output is appended (interactive continue). */
+  const runWith = useCallback(
+    async (stdinVal: string, fresh: boolean) => {
+      if (!isCobol) {
+        setError(null);
+        setAwaitingInput(false);
+        setResult({
+          output: "",
+          fileOutput: {},
+          errors: ["Only COBOL is supported here. Your program must contain an IDENTIFICATION DIVISION and a PROCEDURE DIVISION."],
+          warnings: [],
+          runMs: 0,
+        });
+        return;
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not run the program.");
-    } finally {
-      setRunning(false);
-    }
-  }, [code, files, isCobol, stdin]);
+      if (fresh) {
+        roundsRef.current = 0;
+        echoRef.current = [];
+        termOutputRef.current = "";
+        setTermLines([{ kind: "sys", text: "$ cobc -x -free program.cob && ./program" }]);
+        setResult(null);
+      }
+      setRunning(true);
+      setError(null);
+      setAwaitingInput(false);
+      try {
+        const payload = {
+          code,
+          stdin: stdinVal,
+          files: Object.fromEntries(files.map((f) => [f.name, contentOf(f)])),
+        };
+        const res = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = (await res.json()) as RunResult & { error?: string };
+        if (data.error) {
+          setError(data.error);
+          setTermLines((prev) => [...prev, { kind: "sys", text: `error: ${data.error}` }]);
+        } else {
+          setResult(data);
+          setOutputTab(Object.keys(data.fileOutput ?? {}).length ? "written" : "output");
+          const out = data.output ?? "";
+          const prevOut = termOutputRef.current;
+          if (fresh || !out.startsWith(prevOut)) {
+            // Fresh run, or execution diverged: rebuild from echoes + full output.
+            const rebuilt: { kind: "out" | "in" | "sys"; text: string }[] = [
+              { kind: "sys", text: "$ cobc -x -free program.cob && ./program" },
+            ];
+            for (const echo of echoRef.current) rebuilt.push({ kind: "in", text: `› ${echo}` });
+            for (const line of out.split("\n")) rebuilt.push({ kind: "out", text: line });
+            setTermLines(rebuilt);
+          } else if (out.length > prevOut.length) {
+            const delta = out.slice(prevOut.length).split("\n");
+            setTermLines((prevLines) => [...prevLines, ...delta.map((text) => ({ kind: "out" as const, text }))]);
+          }
+          termOutputRef.current = out;
+          const starved = (data.warnings ?? []).some((w) => w.includes(STARVED_MARKER));
+          if ((data.errors ?? []).length) {
+            setAwaitingInput(false);
+          } else if (starved && roundsRef.current < MAX_INTERACTIVE_ROUNDS) {
+            // Program wants more input: pause and let the user type it live.
+            setAwaitingInput(true);
+          } else {
+            setAwaitingInput(false);
+            if (starved) {
+              setTermLines((prevLines) => [
+                ...prevLines,
+                { kind: "sys", text: "■ input limit reached - prefill more lines in the Input tab and Run again." },
+              ]);
+            } else {
+              setTermLines((prevLines) => [...prevLines, { kind: "sys", text: `■ exited in ${data.runMs} ms - press Run to execute again.` }]);
+            }
+          }
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not run the program.");
+      } finally {
+        setRunning(false);
+      }
+    },
+    [code, files, isCobol],
+  );
+
+  const run = useCallback(() => runWith(stdin, true), [runWith, stdin]);
+
+  /** User typed a line into the terminal for a waiting ACCEPT. */
+  const submitInput = useCallback(() => {
+    const line = inputValue;
+    setInputValue("");
+    setTermLines((prev) => [...prev, { kind: "in", text: `› ${line}` }]);
+    echoRef.current.push(line);
+    roundsRef.current += 1;
+    const nextStdin = stdin + (stdin === "" || stdin.endsWith("\n") ? "" : "\n") + line + "\n";
+    setStdin(nextStdin);
+    void runWith(nextStdin, false);
+  }, [inputValue, runWith, stdin]);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -121,6 +198,12 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     setTitle(example.name);
     setResult(null);
     setShareUrl(null);
+    setTermLines([]);
+    setAwaitingInput(false);
+    setInputValue("");
+    termOutputRef.current = "";
+    echoRef.current = [];
+    roundsRef.current = 0;
   };
 
   const save = async () => {
@@ -175,6 +258,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   };
 
   const writtenFiles = Object.entries(result?.fileOutput ?? {});
+  // While the terminal is prompting for live input, the "stdin exhausted"
+  // warning is noise - the prompt itself already explains the situation.
+  const visibleWarnings = (result?.warnings ?? []).filter((w) => !(awaitingInput && w.includes(STARVED_MARKER)));
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
@@ -267,12 +353,17 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </div>
           <div className="p-3">
             {tab === "stdin" ? (
-              <textarea
-                value={stdin}
-                onChange={(e) => setStdin(e.target.value)}
-                placeholder={"One line per ACCEPT statement, e.g.\nMaria\n30"}
-                className="h-24 w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-2.5 font-mono text-[12.5px] text-slate-800 outline-none focus:border-indigo-400"
-              />
+              <div>
+                <textarea
+                  value={stdin}
+                  onChange={(e) => setStdin(e.target.value)}
+                  placeholder={"Optional prefill - one line per ACCEPT, e.g.\nMaria\n30"}
+                  className="h-24 w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-2.5 font-mono text-[12.5px] text-slate-800 outline-none focus:border-indigo-400"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  …or leave this empty and type live in the Terminal when your program asks for input.
+                </p>
+              </div>
             ) : null}
             {tab === "files" ? (
               <div className="space-y-3">
@@ -325,7 +416,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             {tab === "notes" ? (
               <div className="space-y-2 text-sm leading-relaxed text-slate-600">
                 <p>
-                  Programs are compiled and executed by the built-in GnuCOBOL-compatible engine: the four divisions,
+                  This is a <strong>terminal</strong>: press Run and the program executes on the right. When it reaches{" "}
+                  <span className="font-mono">ACCEPT</span> with no input left, it pauses and you type the value live
+                  (green <span className="font-mono">›</span> prompt) - just like a real console. Your typed lines are
+                  echoed in green and fed back into the program.
+                </p>
+                <p>
+                  The built-in GnuCOBOL-compatible engine supports the four divisions,
                   <span className="font-mono"> PIC</span> clauses, <span className="font-mono">OCCURS</span>,<span className="font-mono"> PERFORM</span>,
                   <span className="font-mono"> EVALUATE</span>,<span className="font-mono"> STRING/UNSTRING/INSPECT</span>,<span className="font-mono"> SEARCH</span>,
                   sequential / relative / indexed files, <span className="font-mono">CALL</span> between programs in the same source and
@@ -381,7 +478,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         <div className="overflow-hidden rounded-xl border border-slate-700 bg-[#0b1220] shadow-xl">
           <div className="flex items-center gap-1 border-b border-slate-700 bg-[#111a2e] px-2 py-2">
             {([
-              ["output", "Output"],
+              ["output", "Terminal"],
               ["written", `Files written (${writtenFiles.length})`],
             ] as ["output" | "written", string][]).map(([id, label]) => (
               <button
@@ -397,13 +494,52 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             ))}
             {result ? <span className="ml-auto pr-2 text-[11px] text-slate-500">{result.runMs} ms</span> : null}
           </div>
-          <div className="max-h-[520px] min-h-[220px] overflow-auto p-4">
+          <div className="max-h-[520px] min-h-[220px] overflow-auto bg-[#0b1220] p-4">
             {error ? (
               <p className="font-mono text-[12.5px] text-rose-400">{error}</p>
             ) : outputTab === "output" ? (
-              <pre className="whitespace-pre-wrap font-mono text-[12.5px] leading-[1.6] text-slate-200">
-                {result ? result.output || "(no output)" : "Press Run to compile and execute your program."}
-              </pre>
+              <div className="font-mono text-[12.5px] leading-[1.6]">
+                {termLines.length === 0 ? (
+                  <p className="text-slate-500">Press Run - the program executes here like in a terminal. When it hits ACCEPT, type your input below and press Enter.</p>
+                ) : (
+                  termLines.map((line, idx) => (
+                    <div
+                      key={idx}
+                      className={
+                        line.kind === "in" ? "text-emerald-300" : line.kind === "sys" ? "text-slate-500" : "whitespace-pre-wrap text-slate-200"
+                      }
+                    >
+                      {line.text === "" ? " " : line.text}
+                    </div>
+                  ))
+                )}
+                {running ? <p className="animate-pulse text-slate-500">● running…</p> : null}
+                {awaitingInput && !running ? (
+                  <form
+                    className="mt-1 flex items-center gap-2 border-t border-slate-800 pt-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      submitInput();
+                    }}
+                  >
+                    <span className="animate-pulse font-bold text-emerald-400">›</span>
+                    <input
+                      autoFocus
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Program is waiting for input - type here, Enter to send"
+                      className="min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-slate-100 outline-none placeholder:text-slate-600 focus:border-emerald-400"
+                    />
+                    <button
+                      type="submit"
+                      className="shrink-0 rounded-md bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-900 hover:bg-emerald-400"
+                    >
+                      Send ⏎
+                    </button>
+                  </form>
+                ) : null}
+                <div ref={termEndRef} />
+              </div>
             ) : writtenFiles.length ? (
               <div className="space-y-4">
                 {writtenFiles.map(([name, content]) => (
@@ -430,11 +566,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </div>
         ) : null}
 
-        {result && result.warnings.length ? (
+        {result && visibleWarnings.length ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <p className="mb-1 text-sm font-semibold text-amber-800">Notes ({result.warnings.length})</p>
+            <p className="mb-1 text-sm font-semibold text-amber-800">Notes ({visibleWarnings.length})</p>
             <ul className="max-h-52 space-y-1 overflow-auto font-mono text-[11.5px] text-amber-800">
-              {result.warnings.map((w, idx) => (
+              {visibleWarnings.map((w, idx) => (
                 <li key={idx}>{w}</li>
               ))}
             </ul>
