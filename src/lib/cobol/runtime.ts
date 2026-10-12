@@ -130,7 +130,7 @@ class Interp {
     // Empty stdin = no lines at all. Previously "" split into [""], which let
     // the first ACCEPT silently succeed with spaces instead of pausing.
     const stdin = (options.stdin ?? "").replace(/\r\n?/g, "\n");
-    this.stdinLines = stdin === "" ? [] : stdin.split("\n").filter((l, i, arr) => i < arr.length - 1 || l.length > 0);
+    this.stdinLines = stdin === "" ? [] : stdin.split("\n").map((l) => l.replace(/\r$/, "")).filter((l, i, arr) => i < arr.length - 1 || l.length > 0);
     for (const [name, content] of Object.entries(options.files ?? {})) {
       this.fs.set(name.toUpperCase(), content.replace(/\r\n?/g, "\n").split("\n").filter((l, i, arr) => i < arr.length - 1 || l.length > 0));
     }
@@ -438,6 +438,7 @@ class Interp {
           this.assign(st.target, { text: " ", numeric: false, num: 0 });
         } else {
           this.acceptPoints.push(this.out.join("").length);
+          this.validateAccept(this.resolveLoc(st.target), line, st.line);
           this.assign(st.target, { text: line, numeric: false, num: parseFloat(line.trim()) || 0 });
         }
         return;
@@ -1343,6 +1344,28 @@ class Interp {
   private writeRaw(loc: Loc, text: string) {
     const padded = (text + " ".repeat(loc.len)).slice(0, loc.len);
     for (let i = 0; i < loc.len; i++) loc.storage[loc.addr + i] = padded[i] ?? " ";
+  }
+
+  /** ACCEPT input validation: gentle warnings when typed data does not fit the target field.
+   *  Blank input is always legal (spaces / zero); alphanumeric targets accept anything. */
+  private validateAccept(loc: Loc, line: string, lineNo: number) {
+    const trimmed = line.trim();
+    if (trimmed === "") return;
+    const pic = loc.field.pic;
+    if (!pic || !isNumericPic(pic) || loc.refmod) return;
+    const n = parseFloat(trimmed);
+    if (!isFinite(n) || isNaN(n)) {
+      this.warnings.push(
+        `Line ${lineNo}: ACCEPT '${trimmed.slice(0, 20)}' is not a valid number for ${loc.field.name} (PIC ${pic.raw}) - 0 used.`,
+      );
+      return;
+    }
+    const scaled = Math.round(Math.abs(n) * Math.pow(10, pic.decimals));
+    if (scaled >= Math.pow(10, pic.digits)) {
+      this.warnings.push(
+        `Line ${lineNo}: ACCEPT value ${trimmed.slice(0, 20)} is too large for ${loc.field.name} (PIC ${pic.raw}) - extra digits truncated.`,
+      );
+    }
   }
 
   private assign(target: Expr, val: Val, checkSize = false) {

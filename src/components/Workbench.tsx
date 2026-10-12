@@ -208,6 +208,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const prefillRef = useRef(initialStdin || "");
   const writtenRef = useRef<Record<string, string>>({});
   const compiledRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const cmdHistoryRef = useRef<string[]>([]);
+  const cmdIdxRef = useRef(0);
   const hydratedRef = useRef(false);
   const MAX_INTERACTIVE_ROUNDS = 12;
 
@@ -342,11 +345,14 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       setRunning(true);
       setError(null);
       setAwaitingInput(false);
+      const ac = new AbortController();
+      abortRef.current = ac;
       try {
         const res = await fetch("/api/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code: combinedCode, stdin: stdinVal, files: dataFiles }),
+          signal: ac.signal,
         });
         const data = (await res.json()) as RunResult & { error?: string };
         if (data.error) {
@@ -393,9 +399,16 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           if (fresh) rememberRun((data.errors ?? []).length === 0, data.runMs);
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Could not run the program.");
+        if ((e as { name?: string })?.name === "AbortError") {
+          print([{ kind: "sys", text: "^C - run cancelled. Type 'run' to start again." }]);
+        } else {
+          const msg = e instanceof Error ? e.message : "Could not run the program.";
+          setError(msg);
+          print([{ kind: "err", text: `error: ${msg}` }]);
+        }
       } finally {
         setRunning(false);
+        abortRef.current = null;
       }
     },
     [combinedCode, dataFiles, isCobol, print, rememberRun],
@@ -550,6 +563,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
   /** Submit from the prompt line: program input when a program waits, otherwise a shell command. */
   const submitInput = useCallback(() => {
+    if (running) return;
     const line = inputValue;
     setInputValue("");
     if (awaitingInput) {
@@ -560,9 +574,20 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       stdinAccRef.current = nextStdin;
       void runWith(nextStdin, false, compiledRef.current ?? defaultExe);
     } else {
+      if (line.trim()) {
+        cmdHistoryRef.current.push(line);
+        if (cmdHistoryRef.current.length > 100) cmdHistoryRef.current.shift();
+        cmdIdxRef.current = cmdHistoryRef.current.length;
+      }
       handleCommand(line);
     }
-  }, [awaitingInput, defaultExe, handleCommand, inputValue, runWith]);
+  }, [awaitingInput, defaultExe, handleCommand, inputValue, runWith, running]);
+
+  /** Stop a run in flight (Stop button / Ctrl+C): abort the request like a real ^C. */
+  const stopRun = useCallback(() => {
+    abortRef.current?.abort();
+    setInputValue("");
+  }, []);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -712,7 +737,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     if (!files) return;
     const additions: DocFile[] = [];
     for (const f of Array.from(files)) {
-      const text = await f.text();
+      const text = (await f.text()).replace(/\r\n/g, "\n");
       additions.push({ name: uniqueName([...docs, ...additions], f.name), content: text, kind: kindOf(f.name) });
     }
     if (additions.length) {
@@ -1039,6 +1064,16 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">Terminal</p>
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
               {writtenFiles.length ? <span className="font-mono text-[10px] text-slate-500">{writtenFiles.length} file(s) written</span> : null}
+              {running ? (
+                <button
+                  type="button"
+                  onClick={stopRun}
+                  title="Stop the run (like Ctrl+C)"
+                  className="rounded bg-rose-600/80 px-2 py-0.5 font-mono text-[10px] font-bold text-white transition hover:bg-rose-500"
+                >
+                  Stop
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setTermLines([])}
@@ -1048,7 +1083,21 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                 <TrashIcon width={13} height={13} />
               </button>
             </div>
-            <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3" onClick={() => termInputRef.current?.focus()}>
+            <div
+              className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3 outline-none"
+              tabIndex={0}
+              onClick={(e) => {
+                if (termInputRef.current) termInputRef.current.focus();
+                else e.currentTarget.focus();
+              }}
+              onKeyDown={(e) => {
+                if (e.ctrlKey && e.key === "c") {
+                  e.preventDefault();
+                  if (running) stopRun();
+                  else setInputValue("");
+                }
+              }}
+            >
               <div className="font-mono leading-relaxed" style={{ fontSize: settings.termFont }}>
                 {(() => {
                   // VS Code-style input: when the program waits for ACCEPT, the
@@ -1139,6 +1188,15 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                               if (e.ctrlKey && e.key === "c") {
                                 e.preventDefault();
                                 setInputValue("");
+                                cmdIdxRef.current = cmdHistoryRef.current.length;
+                              } else if (e.key === "ArrowUp" && cmdHistoryRef.current.length) {
+                                e.preventDefault();
+                                cmdIdxRef.current = Math.max(0, cmdIdxRef.current - 1);
+                                setInputValue(cmdHistoryRef.current[cmdIdxRef.current] ?? "");
+                              } else if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                cmdIdxRef.current = Math.min(cmdHistoryRef.current.length, cmdIdxRef.current + 1);
+                                setInputValue(cmdHistoryRef.current[cmdIdxRef.current] ?? "");
                               }
                             }}
                             aria-label="Type a terminal command"
@@ -1296,8 +1354,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           <li>ls - list files (compiled programs show as ./name)</li>
           <li>cat {"<file>"} - print a file, including files your program wrote</li>
           <li>cobc -x -free {"<file>"} [-o name] - compile & syntax-check (real errors, GnuCOBOL-style)</li>
-          <li>./{"<name>"} or run - execute; type live input when the program asks (Ctrl+C cancels)</li>
-          <li>clear - wipe the terminal</li>
+          <li>./{"<name>"} or run - execute; type live input when the program asks</li>
+          <li>↑ / ↓ recall previous commands · Ctrl+C or Stop cancels a run · clear wipes the terminal</li>
         </ul>
         <p className="mt-2">
           Explorer: double-click a file (or the pencil button) to <strong>rename</strong>, use the upload button to add
