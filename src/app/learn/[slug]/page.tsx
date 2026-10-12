@@ -8,6 +8,7 @@ import LessonProgress from "@/components/LessonProgress";
 import SavePosition from "@/components/SavePosition";
 import SidebarNav from "@/components/SidebarNav";
 import ModuleBar from "@/components/ModuleBar";
+import { slugify } from "@/lib/slug";
 import ChallengeCard from "@/components/ChallengeCard";
 import ScrollToTop from "@/components/ScrollToTop";
 import { challenges } from "@/content/challenges";

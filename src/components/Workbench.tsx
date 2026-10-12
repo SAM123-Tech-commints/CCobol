@@ -30,6 +30,8 @@ interface RunResult {
   errors: string[];
   warnings: string[];
   runMs: number;
+  /** Output length when the program first ran out of stdin (real-console pause point). */
+  inputStarvedAt?: number | null;
 }
 
 interface Props {
@@ -187,8 +189,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           print([{ kind: "err", text: `error: ${data.error}` }]);
         } else {
           setResult(data);
-          for (const [name, content] of Object.entries(data.fileOutput ?? {})) writtenRef.current[name] = content;
-          const out = data.output ?? "";
+          const starved = (data.warnings ?? []).some((w) => w.includes(STARVED_MARKER));
+          const willPause = starved && (data.errors ?? []).length === 0 && roundsRef.current < MAX_INTERACTIVE_ROUNDS;
+          // Show the program only up to the point where it asked for input -
+          // exactly like a real interactive console that halts at ACCEPT.
+          const out = willPause && typeof data.inputStarvedAt === "number" ? data.output.slice(0, data.inputStarvedAt) : (data.output ?? "");
           const prevOut = termOutputRef.current;
           if (fresh || !out.startsWith(prevOut)) {
             const rebuilt: TermLine[] = [];
@@ -200,11 +205,10 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             print(delta.map((text) => ({ kind: "out" as const, text })));
           }
           termOutputRef.current = out;
-          const written = Object.entries(data.fileOutput ?? {});
-          for (const [name, content] of written) {
+          for (const [name, content] of Object.entries(data.fileOutput ?? {})) {
+            writtenRef.current[name] = content;
             print([{ kind: "sys", text: `wrote ${name} (${content.length} bytes) - type 'cat ${name}' to view` }]);
           }
-          const starved = (data.warnings ?? []).some((w) => w.includes(STARVED_MARKER));
           if ((data.errors ?? []).length) {
             setAwaitingInput(false);
             for (const e of data.errors ?? []) print([{ kind: "err", text: `error: ${e}` }]);

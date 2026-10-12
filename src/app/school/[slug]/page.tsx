@@ -68,6 +68,10 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
                 lessons: schoolLessons.map((l) => ({
                   slug: l.slug,
                   title: `${l.no}. ${l.title.split(" - ")[1] ?? l.title}`,
+                  subs: l.sections.map((s, idx) => ({
+                    anchor: `s-${idx}`,
+                    title: s.heading.replace(/^\d+\.\s*/, ""),
+                  })),
                 })),
               },
             ]}

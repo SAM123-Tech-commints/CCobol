@@ -5,9 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { getDoneLessons, markLessonDone, unmarkLessonDone } from "@/lib/progress";
 import { CheckIcon } from "@/components/icons";
 
+interface SlimLesson {
+  slug: string;
+  title: string;
+  subs?: { anchor: string; title: string }[];
+}
+
 interface SlimModule {
   name: string;
-  lessons: { slug: string; title: string }[];
+  lessons: SlimLesson[];
 }
 
 /**
@@ -25,6 +31,7 @@ export default function SidebarNav({
   basePath?: string;
 }) {
   const [done, setDone] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const activeRef = useRef<HTMLAnchorElement | null>(null);
 
   useEffect(() => {
@@ -49,6 +56,15 @@ export default function SidebarNav({
     }
   };
 
+  const toggleExpanded = (slug: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
+
   return (
     <div>
       <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">COBOL Tutorial</p>
@@ -67,32 +83,62 @@ export default function SidebarNav({
                 {module.lessons.map((item) => {
                   const isDone = done.includes(item.slug);
                   const isActive = item.slug === current;
+                  const showSubs = isActive || expanded.has(item.slug);
                   return (
-                    <li key={item.slug} className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => toggle(item.slug)}
-                        title={isDone ? "Mark incomplete" : "Mark complete"}
-                        aria-label={isDone ? `Mark ${item.title} incomplete` : `Mark ${item.title} complete`}
-                        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition ${
-                          isDone
-                            ? "border-emerald-500 bg-emerald-500 text-white"
-                            : "border-slate-300 text-transparent hover:border-emerald-400 dark:border-[#2c3f5c]"
-                        }`}
-                      >
-                        <CheckIcon width={11} height={11} />
-                      </button>
-                      <Link
-                        ref={isActive ? activeRef : undefined}
-                        href={`${basePath}/${item.slug}`}
-                        className={`flex-1 rounded px-2 py-1 text-[13px] leading-snug transition ${
-                          isActive
-                            ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-[#1d5fcc] dark:text-white"
-                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-white"
-                        }`}
-                      >
-                        {item.title}
-                      </Link>
+                    <li key={item.slug}>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => toggle(item.slug)}
+                          title={isDone ? "Mark incomplete" : "Mark complete"}
+                          aria-label={isDone ? `Mark ${item.title} incomplete` : `Mark ${item.title} complete`}
+                          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border transition ${
+                            isDone
+                              ? "border-emerald-500 bg-emerald-500 text-white"
+                              : "border-slate-300 text-transparent hover:border-emerald-400 dark:border-[#2c3f5c]"
+                          }`}
+                        >
+                          <CheckIcon width={11} height={11} />
+                        </button>
+                        <Link
+                          ref={isActive ? activeRef : undefined}
+                          href={`${basePath}/${item.slug}`}
+                          className={`flex-1 rounded px-2 py-1 text-[13px] leading-snug transition ${
+                            isActive
+                              ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-[#1d5fcc] dark:text-white"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-white"
+                          }`}
+                        >
+                          {item.title}
+                        </Link>
+                        {item.subs?.length ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(item.slug)}
+                            aria-label={showSubs ? `Collapse ${item.title} subtopics` : `Expand ${item.title} subtopics`}
+                            aria-expanded={showSubs}
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 ${showSubs ? "rotate-90" : ""}`}
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
+                              <path d="M9 18l6-6-6-6" />
+                            </svg>
+                          </button>
+                        ) : null}
+                      </div>
+                      {showSubs && item.subs?.length ? (
+                        <ul className="my-1 ml-[27px] space-y-0.5 border-l border-slate-200 pl-2.5 dark:border-[#2c3f5c]">
+                          {item.subs.map((sub) => (
+                            <li key={sub.anchor}>
+                              <Link
+                                href={`${basePath}/${item.slug}#${sub.anchor}`}
+                                className="block rounded px-2 py-1 text-[12px] leading-snug text-slate-500 transition hover:bg-slate-50 hover:text-indigo-700 dark:text-slate-500 dark:hover:bg-slate-800/50 dark:hover:text-white"
+                              >
+                                {sub.title}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </li>
                   );
                 })}

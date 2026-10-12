@@ -18,6 +18,8 @@ export interface RunResult {
   errors: string[];
   warnings: string[];
   runMs: number;
+  /** Output length when the program first ran out of stdin (the interactive pause point). */
+  inputStarvedAt: number | null;
 }
 
 export class CobolError extends Error {
@@ -78,6 +80,7 @@ export function run(source: string, options: RunOptions = {}): RunResult {
     errors,
     warnings: [...new Set(interp.warnings)],
     runMs: Date.now() - started,
+    inputStarvedAt: interp.inputStarvedAt,
   };
 }
 
@@ -106,6 +109,8 @@ class Interp {
   private maxOutput: number;
   private stdinLines: string[];
   private stdinPos = 0;
+  /** Output length when stdin first ran out (null = never). */
+  inputStarvedAt: number | null = null;
   private fs = new Map<string, string[]>();
   private openFiles = new Map<string, OpenFile>();
   private signs = new Map<string, number>();
@@ -117,7 +122,10 @@ class Interp {
   constructor(private units: ProgramUnit[], private options: RunOptions) {
     this.maxSteps = options.maxSteps ?? MAX_STEPS_DEFAULT;
     this.maxOutput = options.maxOutput ?? 32768;
-    this.stdinLines = (options.stdin ?? "").replace(/\r\n?/g, "\n").split("\n");
+    // Empty stdin = no lines at all. Previously "" split into [""], which let
+    // the first ACCEPT silently succeed with spaces instead of pausing.
+    const stdin = (options.stdin ?? "").replace(/\r\n?/g, "\n");
+    this.stdinLines = stdin === "" ? [] : stdin.split("\n").filter((l, i, arr) => i < arr.length - 1 || l.length > 0);
     for (const [name, content] of Object.entries(options.files ?? {})) {
       this.fs.set(name.toUpperCase(), content.replace(/\r\n?/g, "\n").split("\n").filter((l, i, arr) => i < arr.length - 1 || l.length > 0));
     }
@@ -420,6 +428,7 @@ class Interp {
         }
         const line = this.stdinPos < this.stdinLines.length ? this.stdinLines[this.stdinPos++] : null;
         if (line === null) {
+          if (this.inputStarvedAt === null) this.inputStarvedAt = this.out.join("").length;
           this.warnings.push(`Line ${st.line}: ACCEPT read past the end of the standard input (spaces used).`);
           this.assign(st.target, { text: " ", numeric: false, num: 0 });
         } else {
