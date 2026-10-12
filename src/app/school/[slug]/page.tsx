@@ -4,6 +4,8 @@ import Quiz from "@/components/Quiz";
 import CodeBlock from "@/components/CodeBlock";
 import ScrollToTop from "@/components/ScrollToTop";
 import VideoPlayer from "@/components/VideoPlayer";
+import SidebarNav from "@/components/SidebarNav";
+import LessonProgress from "@/components/LessonProgress";
 import { CodingSheetDiagram, CustomerInfoTree, StructureHierarchyDiagram } from "@/components/SchoolDiagrams";
 import { renderInline, TextBody } from "@/components/prose";
 import { getSchoolLesson, getSchoolNeighbours, schoolLessons } from "@/content/school";
@@ -54,7 +56,25 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
   return (
     <main className="min-h-screen">
       <Navbar active="school" />
-      <div className="page narrow">
+      <div className="page docs">
+        {/* lesson navigation - same as the tutorial sidebar */}
+        <aside className="side card hidden lg:block">
+          <SidebarNav
+            current={slug}
+            basePath="/school"
+            modules={[
+              {
+                name: "1st Semester",
+                lessons: schoolLessons.map((l) => ({
+                  slug: l.slug,
+                  title: `${l.no}. ${l.title.split(" - ")[1] ?? l.title}`,
+                })),
+              },
+            ]}
+          />
+        </aside>
+
+        <article className="doc">
         {/* breadcrumb */}
         <nav className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <Link href="/school" className="hover:text-indigo-700 dark:hover:text-white">
@@ -70,6 +90,9 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
           Lessons by Royette H. Vergara. Press <span className="font-semibold">Run</span> on any program to compile and
           execute it in the online COBOL terminal.
         </p>
+        <div className="mt-4">
+          <LessonProgress slug={slug} />
+        </div>
 
         {/* objectives */}
         {lesson.objectives?.length ? (
@@ -206,6 +229,7 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
             </Link>
           )}
         </div>
+        </article>
       </div>
       <ScrollToTop />
     </main>

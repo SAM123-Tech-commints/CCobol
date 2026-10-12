@@ -19,23 +19,13 @@ interface CheckState {
   message: string;
 }
 
-/** Exercises page — template layout, real starter code + auto-checking runner. */
+/** Exercises page — template layout, reference solutions always visible + auto-checking. */
 export default function ExercisesBrowser() {
   const [filter, setFilter] = useState("All");
-  const [open, setOpen] = useState<Set<string>>(new Set());
   const [checks, setChecks] = useState<Record<string, CheckState>>({});
 
   const difficulties = useMemo(() => ["All", "Starter", "Easy", "Medium"], []);
   const shown = challenges.filter((c) => filter === "All" || c.difficulty === filter);
-
-  const toggle = (id: string) => {
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const check = async (id: string) => {
     const challenge = challenges.find((c) => c.id === id);
@@ -96,7 +86,6 @@ export default function ExercisesBrowser() {
 
       <div className="grid two">
         {shown.map((c, i) => {
-          const revealed = open.has(c.id);
           const state = checks[c.id];
           return (
             <div key={c.id} className="card exercise">
@@ -107,11 +96,7 @@ export default function ExercisesBrowser() {
               <h3>{c.title}</h3>
               <p>{c.instructions}</p>
 
-              {revealed ? (
-                <CodeBlock code={c.starter} lang="cobol" runnable stdin={c.stdin} title={c.title} />
-              ) : (
-                <div className="locked">Solution hidden — try it first!</div>
-              )}
+              <CodeBlock code={c.starter} lang="cobol" runnable stdin={c.stdin} title={c.title} />
 
               {state ? (
                 <div className={`answer-note ${state.status === "pass" ? "correct" : "incorrect"}`}>
@@ -128,12 +113,9 @@ export default function ExercisesBrowser() {
               </details>
 
               <div className="row">
-                <button type="button" className="btn primary sm" onClick={() => toggle(c.id)}>
-                  {revealed ? "Hide solution" : "Show solution"}
-                </button>
                 <button
                   type="button"
-                  className="btn ghost sm"
+                  className="btn primary sm"
                   onClick={() => check(c.id)}
                   disabled={state?.status === "checking"}
                 >

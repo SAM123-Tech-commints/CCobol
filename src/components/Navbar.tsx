@@ -70,6 +70,7 @@ export default function Navbar({ active }: { active?: NavId }) {
           {open ? <XIcon width={16} height={16} /> : <MenuIcon width={16} height={16} />}
         </button>
       </div>
+      <span className="route-progress" aria-hidden />
     </header>
   );
 }

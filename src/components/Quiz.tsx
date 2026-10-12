@@ -89,6 +89,10 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
   const [matchFlash, setMatchFlash] = useState<{ term: string; def: string } | null>(null);
   const [feedback, setFeedback] = useState<{ ok: boolean; detail: string } | null>(null);
   const [best, setBest] = useState<number | null>(null);
+  // Quizlet-style hints
+  const [mcElim, setMcElim] = useState<number[] | null>(null); // 50:50 removed options
+  const [enumHint, setEnumHint] = useState(false); // reveal first letters
+  const [matchHint, setMatchHint] = useState<string | null>(null); // def to spotlight
 
   useEffect(() => {
     setBest(getQuizBest()[slug] ?? null);
@@ -145,6 +149,9 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
     setMatchWrong({});
     setMatchFlash(null);
     setFeedback(null);
+    setMcElim(null);
+    setEnumHint(false);
+    setMatchHint(null);
   };
 
   const finish = useCallback(
@@ -233,13 +240,29 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
 
   const onDefClick = (def: string) => {
     if (feedback) return;
-    // A definition already used by a locked pair cannot be picked again.
     const used =
       current?.t === "match" &&
       current.data.some((p) => matchLocked[p.term] !== undefined && norm(p.def) === norm(def));
     if (used) return;
     if (matchPick?.side === "term") attemptMatchPair(matchPick.value, def);
     else setMatchPick({ side: "def", value: def });
+  };
+
+  /** Quizlet-style hint: eliminate two wrong options (50:50). */
+  const hintMc = () => {
+    if (!current || current.t !== "mc" || picked !== null || mcElim) return;
+    const wrong = current.data.options.map((_, i) => i).filter((i) => i !== current.data.answer);
+    setMcElim(shuffle(wrong).slice(0, Math.max(0, wrong.length - 1)));
+  };
+
+  /** Quizlet-style hint: spotlight the matching definition for the selected chip. */
+  const hintMatch = () => {
+    if (!current || current.t !== "match" || feedback || !matchPick) return;
+    const pair =
+      matchPick.side === "term"
+        ? current.data.find((p) => p.term === matchPick.value)
+        : current.data.find((p) => norm(p.def) === norm(matchPick.value));
+    if (pair && matchLocked[pair.term] === undefined) setMatchHint(pair.def);
   };
 
   const next = () => {
@@ -390,13 +413,27 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
         {/* MULTIPLE CHOICE */}
         {current.t === "mc" ? (
           <>
-            <p className="mt-4 text-[15px] font-semibold text-slate-900 dark:text-white">{current.data.q}</p>
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-2">
+              <p className="text-[15px] font-semibold text-slate-900 dark:text-white">{current.data.q}</p>
+              {picked === null && !mcElim && current.data.options.length > 2 ? (
+                <button
+                  type="button"
+                  onClick={hintMc}
+                  className="shrink-0 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-300"
+                >
+                  Hint: 50/50
+                </button>
+              ) : null}
+            </div>
             <div className="mt-3 grid gap-2">
               {current.data.options.map((option, i) => {
                 const isAnswer = i === current.data.answer;
                 const isPicked = picked === i;
+                const eliminated = mcElim?.includes(i);
                 let cls =
                   "border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-slate-700 dark:bg-transparent dark:hover:border-indigo-400";
+                if (eliminated && picked === null)
+                  cls = "border-slate-200 bg-slate-50 text-slate-400 line-through opacity-50 dark:border-slate-700 dark:bg-slate-800/40";
                 if (picked !== null && isAnswer) cls = "border-emerald-400 bg-emerald-50 font-semibold dark:bg-emerald-500/10";
                 else if (picked !== null && isPicked) cls = "border-rose-400 bg-rose-50 dark:bg-rose-500/10";
                 else if (picked !== null) cls = "border-slate-200 opacity-60 dark:border-slate-700";
@@ -405,12 +442,12 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
                     key={i}
                     type="button"
                     onClick={() => {
-                      if (picked !== null) return;
+                      if (picked !== null || eliminated) return;
                       setPicked(i);
                       const ok = i === current.data.answer;
                       grade(ok ? 1 : 0, ok, current.data.explanation);
                     }}
-                    disabled={picked !== null}
+                    disabled={picked !== null || eliminated}
                     className={`rounded-xl border px-3.5 py-2.5 text-left text-sm text-slate-800 transition dark:text-slate-200 ${cls}`}
                   >
                     <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-300">
@@ -518,14 +555,32 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
               spellCheck={false}
               className="mt-3 w-full resize-y rounded-xl border border-slate-300 bg-white p-3 font-mono text-sm text-slate-800 outline-none focus:border-indigo-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
             />
-            <button
-              type="button"
-              onClick={gradeEnum}
-              disabled={feedback !== null || !enumText.trim()}
-              className="mt-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
-            >
-              Check answers
-            </button>
+            {enumHint ? (
+              <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs tracking-[0.25em] text-indigo-700 dark:text-[#8db8ff]">
+                {current.data.answers.map((a) => (
+                  <span key={a}>{a.trim().charAt(0).toUpperCase()} · · ·</span>
+                ))}
+              </p>
+            ) : null}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={gradeEnum}
+                disabled={feedback !== null || !enumText.trim()}
+                className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-40"
+              >
+                Check answers
+              </button>
+              {!enumHint && feedback === null ? (
+                <button
+                  type="button"
+                  onClick={() => setEnumHint(true)}
+                  className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-300"
+                >
+                  Hint: first letters
+                </button>
+              ) : null}
+            </div>
           </>
         ) : null}
 
@@ -539,6 +594,20 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
               Click a term, then its definition (or the other way around). Correct pairs lock in{" "}
               <span className="font-semibold text-indigo-600 dark:text-[#8db8ff]">their own color</span>; wrong picks flash red.
             </p>
+            {matchPick && !feedback && matchHint === null ? (
+              <button
+                type="button"
+                onClick={hintMatch}
+                className="mt-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                Hint: show the pair
+              </button>
+            ) : null}
+            {matchHint ? (
+              <p className="mt-2 rounded-lg border border-dashed border-amber-400/60 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/5 dark:text-amber-300">
+                Look for the definition glowing amber.
+              </p>
+            ) : null}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {/* terms column */}
               <div className="space-y-2">
@@ -579,6 +648,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
                 {matchOptions.map((def) => {
                   const isSel = matchPick?.side === "def" && matchPick.value === def;
                   const isFlash = matchFlash?.def === def;
+                  const isHint = matchHint === def;
                   const usedBy =
                     current.t === "match"
                       ? current.data.find((p) => matchLocked[p.term] !== undefined && norm(p.def) === norm(def))
@@ -595,9 +665,11 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
                           ? `${color.chip} ${color.dark} cursor-default`
                           : isFlash
                             ? "border-rose-500 bg-rose-50 text-rose-700 dark:border-rose-400/60 dark:bg-rose-500/10 dark:text-rose-300"
-                            : isSel
-                              ? "border-indigo-500 bg-indigo-50 text-slate-800 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#0d1a2d]"
-                              : "cursor-pointer border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:border-indigo-400"
+                            : isHint
+                              ? "border-amber-400 bg-amber-50 ring-2 ring-amber-300/60 dark:border-amber-400/60 dark:bg-amber-500/10"
+                              : isSel
+                                ? "border-indigo-500 bg-indigo-50 text-slate-800 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#0d1a2d]"
+                                : "cursor-pointer border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:border-indigo-400"
                       }`}
                     >
                       {color ? (
