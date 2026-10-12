@@ -5,8 +5,10 @@ import { useMemo, useState } from "react";
 import CodeBlock from "@/components/CodeBlock";
 import { challenges } from "@/content/challenges";
 
-function compilerLink(code: string, stdin = "") {
-  const payload = { code, stdin, files: {}, title: "COBOL exercise" };
+function compilerLink(code: string) {
+  // No stdin is carried over: the terminal waits for the student to type input
+  // live, one line at a time, exactly like a real COBOL compiler.
+  const payload = { code, stdin: "", files: {}, title: "COBOL exercise" };
   return `/compiler?code=${encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))))}`;
 }
 
@@ -88,7 +90,7 @@ export default function ExercisesBrowser() {
         {shown.map((c, i) => {
           const state = checks[c.id];
           return (
-            <div key={c.id} className="card exercise">
+            <div key={c.id} id={c.id} className="card exercise scroll-mt-24">
               <div className="row between">
                 <span className="tag">#{String(i + 1).padStart(2, "0")}</span>
                 <span className={`level ${levelClass(c.difficulty)}`}>{c.difficulty}</span>
@@ -121,7 +123,7 @@ export default function ExercisesBrowser() {
                 >
                   {state?.status === "checking" ? "Checking…" : "Check my code"}
                 </button>
-                <Link className="btn ghost sm" href={compilerLink(c.starter, c.stdin ?? "")}>
+                <Link className="btn ghost sm" href={compilerLink(c.starter)}>
                   Open compiler
                 </Link>
               </div>

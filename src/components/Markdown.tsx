@@ -1,4 +1,5 @@
 import CodeBlock from "@/components/CodeBlock";
+import { slugify } from "@/lib/slug";
 
 interface Props {
   markdown: string;
@@ -98,6 +99,7 @@ export default function Markdown({ markdown, files = {}, stdin = "" }: Props) {
         blocks.push(
           <h2
             key={key++}
+            id={slugify(text)}
             className="mb-4 mt-12 scroll-mt-20 border-b border-slate-200 pb-2.5 text-2xl font-bold tracking-tight text-slate-900 dark:border-[#243652] dark:text-white"
           >
             {inline(text)}
@@ -105,13 +107,13 @@ export default function Markdown({ markdown, files = {}, stdin = "" }: Props) {
         );
       } else if (level === 3) {
         blocks.push(
-          <h3 key={key++} className="mb-3 mt-10 scroll-mt-20 text-xl font-semibold text-slate-900 dark:text-white">
+          <h3 key={key++} id={slugify(text)} className="mb-3 mt-10 scroll-mt-20 text-xl font-semibold text-slate-900 dark:text-white">
             {inline(text)}
           </h3>,
         );
       } else {
         blocks.push(
-          <h4 key={key++} className="mb-2 mt-7 text-base font-semibold text-slate-800 dark:text-slate-200">
+          <h4 key={key++} id={slugify(text)} className="mb-2 mt-7 text-base font-semibold text-slate-800 dark:text-slate-200">
             {inline(text)}
           </h4>,
         );

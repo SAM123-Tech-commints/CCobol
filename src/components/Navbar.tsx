@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
-import { BookIcon, CodeIcon, GraduationCapIcon, MenuIcon, QuizIcon, TerminalIcon, XIcon } from "@/components/icons";
+import SearchDialog from "@/components/SearchDialog";
+import { BookIcon, CodeIcon, GraduationCapIcon, MenuIcon, QuizIcon, SearchIcon, TerminalIcon, XIcon } from "@/components/icons";
 
 type NavId = "tutorials" | "school" | "exercises" | "quiz" | "compiler";
 
@@ -32,9 +33,22 @@ function Logo() {
   );
 }
 
-/** Template topbar: sticky glass, pill nav, blue CTA, theme toggle, mobile menu. */
+/** Template topbar: sticky glass, pill nav, blue CTA, search, theme toggle, mobile menu. */
 export default function Navbar({ active }: { active?: NavId }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState(false);
+
+  // Ctrl/Cmd+K opens search from anywhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearch((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <header className="topbar">
@@ -55,6 +69,9 @@ export default function Navbar({ active }: { active?: NavId }) {
       </nav>
 
       <div className="header-actions">
+        <button type="button" className="icon-button" onClick={() => setSearch(true)} aria-label="Search (Ctrl+K)" title="Search (Ctrl+K)">
+          <SearchIcon width={16} height={16} />
+        </button>
         <Link href="/compiler" className={active === "compiler" ? "cta active" : "cta"}>
           <TerminalIcon width={14} height={14} />
           Compiler
@@ -71,6 +88,7 @@ export default function Navbar({ active }: { active?: NavId }) {
         </button>
       </div>
       <span className="route-progress" aria-hidden />
+      <SearchDialog open={search} onClose={() => setSearch(false)} />
     </header>
   );
 }

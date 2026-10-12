@@ -50,27 +50,27 @@
 html[data-theme="light"] {
   --body-bg: #f4f7fb;
   --body-glow: rgba(39, 105, 255, 0.09);
-  --text: #23324a;
-  --heading: #0f1c30;
-  --muted: #5c6b82;
-  --muted-2: #74839a;
-  --muted-3: #8593aa;
+  --text: #1b2a41;
+  --heading: #0a1728;
+  --muted: #46566e;
+  --muted-2: #52627a;
+  --muted-3: #5d6d85;
   --panel: #ffffff;
   --panel-2: #ffffff;
   --panel-3: #ffffff;
   --panel-4: #f2f5fa;
   --panel-deep: #0b1625;
-  --line: rgba(18, 38, 66, 0.12);
-  --line-soft: rgba(18, 38, 66, 0.08);
-  --line-strong: rgba(18, 38, 66, 0.18);
+  --line: rgba(18, 38, 66, 0.14);
+  --line-soft: rgba(18, 38, 66, 0.1);
+  --line-strong: rgba(18, 38, 66, 0.2);
   --chip-bg: rgba(18, 38, 66, 0.05);
-  --chip-border: rgba(18, 38, 66, 0.18);
-  --accent-ink: #1f5fd6;
+  --chip-border: rgba(18, 38, 66, 0.2);
+  --accent-ink: #1a55c4;
   --accent-soft: rgba(75, 143, 255, 0.12);
-  --accent-line: rgba(31, 95, 214, 0.3);
-  --green: #16a34a;
-  --amber: #b45309;
-  --red: #dc2626;
+  --accent-line: rgba(31, 95, 214, 0.32);
+  --green: #15803d;
+  --amber: #a16207;
+  --red: #b91c1c;
   --input-bg: #ffffff;
   --code-bg: #0b1625;
   --code-bar: #132539;
@@ -545,13 +545,25 @@ button {
   width: 260px;
   flex-shrink: 0;
   max-height: calc(100vh - 110px);
-  overflow: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px;
-  /* minimalistic: scroll still works but shows no second scrollbar */
-  scrollbar-width: none;
+  /* better design: slim, accent-tinted scrollbar instead of a hidden one */
+  scrollbar-width: thin;
+  scrollbar-color: var(--chip-border) transparent;
 }
 .side::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+}
+.side::-webkit-scrollbar-track {
+  background: transparent;
+}
+.side::-webkit-scrollbar-thumb {
+  background: var(--chip-border);
+  border-radius: 999px;
+}
+.side:hover::-webkit-scrollbar-thumb {
+  background: var(--accent-line);
 }
 .side-progress {
   padding: 4px 4px 15px;
@@ -1594,15 +1606,15 @@ button {
 @keyframes pageEnter {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
+/* Opacity only - a transform here would make position:fixed (scroll-to-top,
+   search overlay) anchor to this element instead of the viewport. */
 .page-enter {
-  animation: pageEnter 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageEnter 260ms ease both;
 }
 @media (prefers-reduced-motion: reduce) {
   .page-enter {
@@ -2025,4 +2037,215 @@ button {
 .dark .placeholder\:text-slate-500::placeholder,
 .dark .placeholder\:text-slate-600::placeholder {
   color: #5a6b7f;
+}
+
+/* ================================================================== */
+/* Search dialog                                                       */
+/* ================================================================== */
+.search-overlay {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 16px 16px;
+  background: color-mix(in srgb, #04101f 62%, transparent);
+  backdrop-filter: blur(6px);
+  animation: pageEnter 160ms ease both;
+}
+.search-panel {
+  display: flex;
+  width: min(680px, 100%);
+  max-height: 70vh;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: var(--panel-3);
+  box-shadow: var(--shadow);
+}
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+  color: var(--muted);
+}
+.search-input-row input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--heading);
+  font-family: inherit;
+  font-size: 16px;
+  outline: none;
+}
+.search-input-row input::placeholder {
+  color: var(--muted-3);
+}
+kbd {
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: var(--chip-bg);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+.search-empty {
+  padding: 22px 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: center;
+}
+.search-empty em {
+  color: var(--accent-ink);
+  font-style: normal;
+  font-weight: 600;
+}
+.search-result {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: 120ms ease;
+}
+.search-result.active {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.search-kind {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font: 700 9px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.search-kind.k-tutorial {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.search-kind.k-school {
+  background: rgba(74, 222, 128, 0.14);
+  color: var(--green);
+}
+.search-kind.k-exercise {
+  background: rgba(251, 191, 36, 0.16);
+  color: var(--amber);
+}
+.search-kind.k-example {
+  background: rgba(167, 139, 250, 0.16);
+  color: #a78bfa;
+}
+.search-kind.k-quiz {
+  background: rgba(96, 165, 250, 0.16);
+  color: #60a5fa;
+}
+.search-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.search-text strong {
+  color: var(--heading);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.search-text small {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.search-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 8px 14px;
+  color: var(--muted-3);
+  font-size: 10.5px;
+}
+.search-hint span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+@media (max-width: 640px) {
+  .search-overlay {
+    padding-top: 8vh;
+  }
+  .search-input-row input {
+    font-size: 15px;
+  }
+}
+
+/* ================================================================== */
+/* Light-theme readability                                             */
+/* ================================================================== */
+html[data-theme="light"] .text-slate-300 {
+  color: #3f4e63;
+}
+html[data-theme="light"] .text-slate-400 {
+  color: #55657e;
+}
+html[data-theme="light"] .text-slate-500 {
+  color: #40506a;
+}
+html[data-theme="light"] .text-slate-600 {
+  color: #33425a;
+}
+html[data-theme="light"] .text-slate-700 {
+  color: #26364e;
+}
+html[data-theme="light"] .text-slate-100 {
+  color: #0b1625;
+}
+html[data-theme="light"] .text-slate-200 {
+  color: #16243a;
+}
+html[data-theme="light"] .placeholder\:text-slate-500::placeholder,
+html[data-theme="light"] .placeholder\:text-slate-600::placeholder {
+  color: #7d8ca3;
+}
+html[data-theme="light"] .text-indigo-600,
+html[data-theme="light"] .text-indigo-700 {
+  color: #1a55c4;
+}
+html[data-theme="light"] .text-amber-800 {
+  color: #92400e;
+}
+html[data-theme="light"] .text-emerald-700,
+html[data-theme="light"] .text-emerald-800 {
+  color: #15803d;
+}
+html[data-theme="light"] .text-rose-700,
+html[data-theme="light"] .text-rose-800 {
+  color: #b91c1c;
+}
+html[data-theme="light"] .text-sky-700,
+html[data-theme="light"] .text-sky-800 {
+  color: #1d4ed8;
 }

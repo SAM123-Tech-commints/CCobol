@@ -5,8 +5,9 @@ import { useState } from "react";
 import type { Challenge } from "@/content/challenges";
 import { markChallengeDone } from "@/lib/progress";
 
-function compilerLink(code: string, stdin = ""): string {
-  const payload = { code, stdin, files: {}, title: "COBOL challenge" };
+function compilerLink(code: string): string {
+  // No stdin carried over - the terminal waits for live typing at each ACCEPT.
+  const payload = { code, stdin: "", files: {}, title: "COBOL challenge" };
   return `/compiler?code=${encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))))}`;
 }
 
@@ -95,7 +96,7 @@ export default function ChallengeCard({ challenge }: { challenge: Challenge }) {
           {check.status === "checking" ? "Checking…" : "Check my code"}
         </button>
         <Link
-          href={compilerLink(code, challenge.stdin ?? "")}
+          href={compilerLink(code)}
           className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-indigo-400 hover:text-indigo-700"
         >
           Open in compiler

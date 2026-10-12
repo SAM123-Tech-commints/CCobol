@@ -211,7 +211,7 @@ export const examples: Example[] = [
   {
     id: "accept",
     name: "Input with ACCEPT",
-    description: "Reads two lines from the stdin box",
+    description: "Pauses and waits - type each answer live in the terminal",
     code: `       IDENTIFICATION DIVISION.
        PROGRAM-ID. AcceptDemo.
        DATA DIVISION.
@@ -227,7 +227,6 @@ export const examples: Example[] = [
            DISPLAY 'NEXT YEAR YOU WILL BE ' WS-AGE + 1.
            STOP RUN.
 `,
-    stdin: "Maria\n30\n",
   },
   {
     id: "files",
