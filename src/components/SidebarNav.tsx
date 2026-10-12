@@ -42,7 +42,7 @@ export default function SidebarNav({ modules, current }: { modules: SlimModule[]
                 <span>{module.name}</span>
                 <span className="text-[11px] font-bold text-slate-400">{moduleDone}/{module.lessons.length}</span>
               </p>
-              <ul className="space-y-0.5 border-l border-slate-200 pl-3 dark:border-[#3c3c3c]">
+              <ul className="space-y-0.5 border-l border-slate-200 pl-3 dark:border-[#243652]">
                 {module.lessons.map((item) => {
                   const isDone = done.includes(item.slug);
                   const isActive = item.slug === current;
@@ -53,7 +53,7 @@ export default function SidebarNav({ modules, current }: { modules: SlimModule[]
                         href={`/learn/${item.slug}`}
                         className={`flex items-start gap-1.5 rounded px-2 py-1 text-[13px] leading-snug transition ${
                           isActive
-                            ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-[#094771] dark:text-white"
+                            ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-[#1d5fcc] dark:text-white"
                             : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#2a2d2e] dark:hover:text-white"
                         }`}
                       >

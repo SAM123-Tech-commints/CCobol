@@ -562,9 +562,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
-      <div className="overflow-hidden rounded-xl border border-slate-700 bg-[#0b1220] shadow-2xl">
+      <div className="overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-2xl">
         {/* top toolbar */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 bg-[#111a2e] px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 bg-[#0b1625] px-3 py-2">
           <span className="mr-1 hidden items-center gap-1.5 sm:flex">
             <span className="h-3 w-3 rounded-full bg-rose-500/80" />
             <span className="h-3 w-3 rounded-full bg-amber-400/80" />
@@ -619,7 +619,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         <div className="flex min-h-[480px] flex-col lg:flex-row">
           <div className="flex min-w-0 flex-1 flex-col sm:flex-row">
             {/* explorer */}
-            <div className="shrink-0 border-b border-slate-800 bg-[#0d1526] sm:w-52 sm:border-b-0 sm:border-r">
+            <div className="shrink-0 border-b border-slate-800 bg-[#0a1422] sm:w-52 sm:border-b-0 sm:border-r">
               <div className="flex items-center justify-between px-3 pt-3 pb-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Explorer</p>
                 <div className="flex gap-1">
@@ -716,14 +716,14 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
             {/* editor */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800 bg-[#0d1526] px-2 pt-1.5">
+              <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800 bg-[#0a1422] px-2 pt-1.5">
                 {docs.map((doc, idx) => (
                   <button
                     key={`${doc.kind}-${doc.name}`}
                     type="button"
                     onClick={() => setActive(idx)}
                     className={`flex shrink-0 items-center gap-1.5 rounded-t-md px-3 py-1.5 font-mono text-xs transition ${
-                      idx === safeActive ? "bg-[#0b1220] font-semibold text-white" : "text-slate-500 hover:bg-slate-800/50 hover:text-slate-300"
+                      idx === safeActive ? "bg-[#091524] font-semibold text-white" : "text-slate-500 hover:bg-slate-800/50 hover:text-slate-300"
                     }`}
                   >
                     {doc.name}
@@ -734,7 +734,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <div className="relative flex max-h-[520px] min-h-[380px] flex-1">
                 <div
                   ref={gutterRef}
-                  className="hidden select-none overflow-hidden border-r border-slate-800 bg-[#0d1526] px-2 py-3 text-right font-mono text-[13px] leading-[1.55] text-slate-600 sm:block"
+                  className="hidden select-none overflow-hidden border-r border-slate-800 bg-[#0a1422] px-2 py-3 text-right font-mono text-[13px] leading-[1.55] text-slate-600 sm:block"
                 >
                   {Array.from({ length: lineCount }, (_, idx) => (
                     <div key={idx}>{idx + 1}</div>
@@ -766,7 +766,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
           {/* terminal */}
           <div className="flex min-h-[300px] shrink-0 flex-col border-t border-slate-800 bg-black lg:w-[380px] lg:border-t-0 lg:border-l">
-            <div className="flex items-center gap-2 border-b border-slate-800 bg-[#111a2e] px-3 py-1.5">
+            <div className="flex items-center gap-2 border-b border-slate-800 bg-[#0b1625] px-3 py-1.5">
               <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">Terminal</p>
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
               {writtenFiles.length ? <span className="font-mono text-[10px] text-slate-500">{writtenFiles.length} file(s) written</span> : null}
@@ -864,7 +864,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         </div>
 
         {/* status bar */}
-        <div className="flex items-center gap-3 border-t border-slate-700 bg-[#111a2e] px-3 py-1.5 font-mono text-[11px] text-slate-400">
+        <div className="flex items-center gap-3 border-t border-slate-700 bg-[#0b1625] px-3 py-1.5 font-mono text-[11px] text-slate-400">
           <span className={running ? "text-amber-400" : "text-emerald-400"}>● {running ? "Running" : "Ready"}</span>
           <span className="truncate">{activeDoc.name}</span>
           <span className="ml-auto shrink-0">

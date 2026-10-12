@@ -4,9 +4,10 @@ import Quiz from "@/components/Quiz";
 import CodeBlock from "@/components/CodeBlock";
 import ScrollToTop from "@/components/ScrollToTop";
 import VideoPlayer from "@/components/VideoPlayer";
-import { videoFor } from "@/content/videos";
 import { CodingSheetDiagram, CustomerInfoTree, StructureHierarchyDiagram } from "@/components/SchoolDiagrams";
+import { renderInline, TextBody } from "@/components/prose";
 import { getSchoolLesson, getSchoolNeighbours, schoolLessons } from "@/content/school";
+import { videoFor } from "@/content/videos";
 
 export const dynamic = "force-dynamic";
 
@@ -18,20 +19,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const lesson = getSchoolLesson(slug);
   return {
-    title: lesson ? `${lesson.title} - 1st Semester School Tutorial` : "School lesson not found",
-    description: lesson ? `School COBOL tutorial: ${lesson.title}. Exact slide text with explanations in simpler words.` : undefined,
+    title: lesson ? `${lesson.title} - 1st Semester COBOL Tutorial` : "School lesson not found",
+    description: lesson ? `${lesson.title}: clear explanations, runnable programs and a quiz - COBOL 1st semester.` : undefined,
   };
-}
-
-/** Yellow box = exact slide text; blue box = "in simpler words" hint. */
-function ExactBox({ text }: { text: string }) {
-  if (!text.trim()) return null;
-  return (
-    <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-500/5">
-      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">Exact text from the slide</p>
-      <div className="whitespace-pre-wrap text-[14px] leading-relaxed text-slate-800 dark:text-slate-200">{text}</div>
-    </div>
-  );
 }
 
 /** Insert the matching slide diagram, keyed on the section heading. */
@@ -47,11 +37,11 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
   const lesson = getSchoolLesson(slug);
   if (!lesson) {
     return (
-      <main className="min-h-screen bg-white dark:bg-[#1e1e1e]">
+      <main className="min-h-screen bg-[#07111f]">
         <Navbar active="school" />
         <div className="mx-auto max-w-3xl px-4 py-20 text-center">
           <h1 className="text-2xl font-bold dark:text-white">Lesson not found</h1>
-          <Link href="/school" className="mt-4 inline-block text-indigo-600 hover:underline dark:text-[#4fc1ff]">
+          <Link href="/school" className="mt-4 inline-block text-indigo-600 hover:underline dark:text-[#8db8ff]">
             Back to the school tutorial
           </Link>
         </div>
@@ -59,124 +49,141 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
     );
   }
   const { prev, next } = getSchoolNeighbours(slug);
+  const video = videoFor(slug);
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#1e1e1e]">
+    <main className="min-h-screen bg-[#07111f]">
       <Navbar active="school" />
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <nav className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        {/* breadcrumb */}
+        <nav className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <Link href="/school" className="hover:text-indigo-700 dark:hover:text-white">
-            1st Semester School Tutorial
+            1st Semester COBOL
           </Link>
           <span>/</span>
           <span className="font-semibold text-slate-700 dark:text-slate-200">Lesson {lesson.no}</span>
         </nav>
 
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">{lesson.title}</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Lessons by Royette H. Vergara - exact slide text with explanations in simpler words. Press Run on any full
-          program to execute it in the online COBOL terminal.
+        {/* title */}
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">{lesson.title}</h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          Lessons by Royette H. Vergara. Press <span className="font-semibold">Run</span> on any program to compile and
+          execute it in the online COBOL terminal.
         </p>
 
+        {/* objectives */}
         {lesson.objectives?.length ? (
-          <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4 dark:border-indigo-500/30 dark:bg-indigo-500/5">
-            <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-[#4fc1ff]">Lesson objectives</p>
-            <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700 dark:text-slate-300">
+          <div className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5 dark:border-indigo-500/30 dark:bg-indigo-500/5">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-[#8db8ff]">Objectives</p>
+            <ol className="list-decimal space-y-1.5 pl-5 text-[15px] text-slate-700 dark:text-slate-300">
               {lesson.objectives.map((o, i) => (
-                <li key={i}>{o}</li>
+                <li key={i}>{renderInline(o)}</li>
               ))}
             </ol>
           </div>
         ) : null}
 
-        {/* Video lecture with chapter timeline (add yours in src/content/videos.ts) */}
-        {(() => {
-          const video = videoFor(slug);
-          return video ? (
-            <div className="mt-6">
-              <VideoPlayer source={video} />
-            </div>
-          ) : null;
-        })()}
+        {/* video lecture (if configured in src/content/videos.ts) */}
+        {video ? (
+          <div className="mt-8">
+            <VideoPlayer source={video} />
+          </div>
+        ) : null}
 
-        <div className="mt-8 space-y-10">
+        {/* content */}
+        <article className="mt-4">
           {lesson.sections.map((s, idx) => {
             const runnable = /IDENTIFICATION DIVISION|PROCEDURE DIVISION/i.test(s.code ?? "");
             return (
-              <section key={idx}>
-                <h2 className="mb-3 text-xl font-bold text-slate-900 dark:text-white">{s.heading}</h2>
-                <div className="space-y-3">
-                  <ExactBox text={s.exact} />
-                  <SectionDiagram heading={s.heading} />
-                  {s.code ? (
-                    <CodeBlock
-                      code={s.code}
-                      lang="cobol"
-                      runnable={runnable}
-                      title={runnable ? `Lesson ${lesson.no} demo - ${s.heading}` : `Lesson ${lesson.no} - ${s.heading}`}
-                    />
-                  ) : null}
-                  {s.table ? (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-[#3c3c3c]">
-                      <table className="w-full border-collapse text-left text-sm">
-                        <thead>
-                          <tr className="bg-slate-100 dark:bg-[#2d2d2d]">
-                            {s.table.headers.map((h, i) => (
-                              <th key={i} className="border-b border-slate-200 px-3 py-2 font-semibold text-slate-800 dark:border-[#3c3c3c] dark:text-slate-200">
-                                {h}
-                              </th>
+              <section key={idx} id={`s-${idx}`} className="scroll-mt-20">
+                <h2 className="mb-5 mt-12 border-b border-slate-200 pb-2.5 text-2xl font-bold tracking-tight text-slate-900 dark:border-[#243652] dark:text-white">
+                  {renderInline(s.heading)}
+                </h2>
+
+                <TextBody text={s.exact} />
+
+                <SectionDiagram heading={s.heading} />
+
+                {s.code ? (
+                  <CodeBlock
+                    code={s.code}
+                    lang="cobol"
+                    runnable={runnable}
+                    title={runnable ? `Demo - ${s.heading}` : s.heading}
+                  />
+                ) : null}
+
+                {s.table ? (
+                  <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200 dark:border-[#243652]">
+                    <table className="w-full border-collapse text-left text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-[#101d2f]">
+                          {s.table.headers.map((h, i) => (
+                            <th
+                              key={i}
+                              className="border-b border-slate-200 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-[#243652] dark:text-slate-400"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {s.table.rows.map((row, r) => (
+                          <tr key={r} className="align-top even:bg-slate-50/60 dark:even:bg-white/[0.02]">
+                            {row.map((cell, c) => (
+                              <td
+                                key={c}
+                                className={`border-b border-slate-100 px-4 py-2.5 leading-relaxed dark:border-[#22354f] ${
+                                  c === 0
+                                    ? "whitespace-nowrap font-mono font-semibold text-indigo-700 dark:text-[#8db8ff]"
+                                    : "text-slate-700 dark:text-slate-300"
+                                } ${/overline|Size error/.test(cell) ? "text-rose-600 dark:text-rose-400" : ""}`}
+                              >
+                                {cell}
+                              </td>
                             ))}
                           </tr>
-                        </thead>
-                        <tbody>
-                          {s.table.rows.map((row, r) => (
-                            <tr key={r} className="align-top">
-                              {row.map((cell, c) => (
-                                <td
-                                  key={c}
-                                  className={`border-b border-slate-100 px-3 py-2 dark:border-[#333] ${
-                                    c === 0 ? "font-mono font-semibold text-indigo-700 dark:text-[#4fc1ff]" : "text-slate-700 dark:text-slate-300"
-                                  } ${/overline|Size error/.test(cell) ? "text-rose-600 dark:text-rose-400" : ""}`}
-                                >
-                                  {cell}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
-                  {s.note ? (
-                    <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-400/30 dark:bg-rose-500/5 dark:text-rose-300">
-                      <strong>Note:</strong> {s.note}
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+
+                {s.note ? (
+                  <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm leading-relaxed text-amber-900 dark:border-amber-400/30 dark:bg-amber-500/5 dark:text-amber-200">
+                    <strong className="font-bold">Note:</strong>{" "}
+                    {renderInline(s.note.replace(/^Slide issue:?\s*/i, ""))}
+                  </p>
+                ) : null}
+
+                {s.simple ? (
+                  <div className="mt-5 border-l-4 border-sky-300 pl-4 dark:border-sky-400/40">
+                    <p className="text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
+                      {renderInline(s.simple)}
                     </p>
-                  ) : null}
-                  {s.simple ? (
-                    <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-400/30 dark:bg-sky-500/5">
-                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">In simpler words (hint)</p>
-                      <p className="text-[14px] leading-relaxed text-slate-700 dark:text-slate-300">{s.simple}</p>
-                    </div>
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
               </section>
             );
           })}
-        </div>
+        </article>
 
-        <div className="mt-10">
-          <h2 className="mb-2 text-lg font-bold text-slate-900 dark:text-white">Check what you learned</h2>
-          <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-            Quiz on the exact terms from this lesson. 60%+ marks it complete.
+        {/* quiz */}
+        <div className="mt-14 border-t border-slate-200 pt-10 dark:border-[#243652]">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Check what you learned</h2>
+          <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Quiz on this lesson's terms - pass with 60%+ to mark it complete.
           </p>
           <Quiz slug={slug} />
         </div>
 
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-[#3c3c3c]">
+        {/* prev / next */}
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6 dark:border-[#243652]">
           {prev ? (
-            <Link href={`/school/${prev.slug}`} className="text-left">
+            <Link href={`/school/${prev.slug}`} className="group text-left">
               <span className="block text-xs text-slate-400">Previous</span>
-              <span className="font-semibold text-slate-800 hover:text-indigo-700 dark:text-slate-200 dark:hover:text-white">
+              <span className="font-semibold text-slate-800 group-hover:text-indigo-700 dark:text-slate-200 dark:group-hover:text-white">
                 Lesson {prev.no}: {prev.title.split(" - ")[1]}
               </span>
             </Link>
@@ -184,16 +191,18 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
             <span />
           )}
           {next ? (
-            <Link href={`/school/${next.slug}`} className="text-right">
+            <Link href={`/school/${next.slug}`} className="group text-right">
               <span className="block text-xs text-slate-400">Next</span>
-              <span className="font-semibold text-indigo-700 hover:text-indigo-900 dark:text-[#4fc1ff] dark:hover:text-white">
+              <span className="font-semibold text-indigo-700 group-hover:text-indigo-900 dark:text-[#8db8ff] dark:group-hover:text-white">
                 Lesson {next.no}: {next.title.split(" - ")[1]}
               </span>
             </Link>
           ) : (
-            <Link href="/compiler" className="text-right">
+            <Link href="/compiler" className="group text-right">
               <span className="block text-xs text-slate-400">Continue</span>
-              <span className="font-semibold text-indigo-700 hover:text-indigo-900 dark:text-[#4fc1ff] dark:hover:text-white">Open the compiler</span>
+              <span className="font-semibold text-indigo-700 group-hover:text-indigo-900 dark:text-[#8db8ff] dark:group-hover:text-white">
+                Open the compiler
+              </span>
             </Link>
           )}
         </div>

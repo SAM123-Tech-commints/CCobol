@@ -23,13 +23,16 @@ export default function Markdown({ markdown, files = {}, stdin = "" }: Props) {
       const token = m[0];
       if (token.startsWith("`")) {
         out.push(
-          <code key={key++} className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.87em] text-indigo-700">
+          <code
+            key={key++}
+            className="rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-[0.85em] font-semibold text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-500/15 dark:text-[#6aa1ff] dark:ring-indigo-400/20"
+          >
             {token.slice(1, -1)}
           </code>,
         );
       } else if (token.startsWith("**")) {
         out.push(
-          <strong key={key++} className="font-semibold text-slate-900">
+          <strong key={key++} className="font-bold text-slate-900 dark:text-white">
             {token.slice(2, -2)}
           </strong>,
         );
@@ -37,7 +40,7 @@ export default function Markdown({ markdown, files = {}, stdin = "" }: Props) {
         const label = token.slice(1, token.indexOf("]"));
         const href = token.slice(token.indexOf("](") + 2, -1);
         out.push(
-          <a key={key++} href={href} className="font-medium text-indigo-600 underline decoration-indigo-300 hover:text-indigo-800">
+          <a key={key++} href={href} className="font-medium text-indigo-600 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-800 dark:text-[#8db8ff] dark:decoration-indigo-400/40">
             {label}
           </a>,
         );
@@ -93,19 +96,22 @@ export default function Markdown({ markdown, files = {}, stdin = "" }: Props) {
       const text = heading[2].replace(/\*\*/g, "");
       if (level <= 2) {
         blocks.push(
-          <h2 key={key++} className="mt-10 mb-4 text-2xl font-bold tracking-tight text-slate-900">
+          <h2
+            key={key++}
+            className="mb-4 mt-12 scroll-mt-20 border-b border-slate-200 pb-2.5 text-2xl font-bold tracking-tight text-slate-900 dark:border-[#243652] dark:text-white"
+          >
             {inline(text)}
           </h2>,
         );
       } else if (level === 3) {
         blocks.push(
-          <h3 key={key++} className="mt-8 mb-3 text-lg font-bold text-slate-900">
+          <h3 key={key++} className="mb-3 mt-10 scroll-mt-20 text-xl font-semibold text-slate-900 dark:text-white">
             {inline(text)}
           </h3>,
         );
       } else {
         blocks.push(
-          <h4 key={key++} className="mt-6 mb-2 text-base font-semibold text-slate-800">
+          <h4 key={key++} className="mb-2 mt-7 text-base font-semibold text-slate-800 dark:text-slate-200">
             {inline(text)}
           </h4>,
         );
@@ -124,14 +130,25 @@ export default function Markdown({ markdown, files = {}, stdin = "" }: Props) {
       }
       const ListTag = ordered ? "ol" : "ul";
       blocks.push(
-        <ListTag
-          key={key++}
-          className={`my-4 space-y-1.5 pl-6 ${ordered ? "list-decimal" : "list-disc"} text-slate-700 marker:text-indigo-400`}
-        >
-          {items.map((item, idx) => (
-            <li key={idx}>{inline(item)}</li>
-          ))}
-        </ListTag>,
+        ListTag === "ol" ? (
+          <ol
+            key={key++}
+            className="my-4 list-decimal space-y-1.5 pl-6 text-[15px] leading-relaxed text-slate-700 marker:font-semibold marker:text-indigo-500 dark:text-slate-300"
+          >
+            {items.map((item, idx) => (
+              <li key={idx}>{inline(item)}</li>
+            ))}
+          </ol>
+        ) : (
+          <ul
+            key={key++}
+            className="my-4 list-disc space-y-1.5 pl-6 text-[15px] leading-relaxed text-slate-700 marker:text-indigo-400 dark:text-slate-300"
+          >
+            {items.map((item, idx) => (
+              <li key={idx}>{inline(item)}</li>
+            ))}
+          </ul>
+        ),
       );
       continue;
     }
@@ -143,7 +160,7 @@ export default function Markdown({ markdown, files = {}, stdin = "" }: Props) {
       i++;
     }
     blocks.push(
-      <p key={key++} className="my-4 leading-relaxed text-slate-700">
+      <p key={key++} className="my-4 text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">
         {inline(para.join(" "))}
       </p>,
     );

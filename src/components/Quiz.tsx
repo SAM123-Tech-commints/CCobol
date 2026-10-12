@@ -300,7 +300,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
             {MODES.find((m) => m.id === mode)?.label} - {points.toFixed(1).replace(/\.0$/, "")} / {total} correct
             {best !== null ? ` · best ${best}%` : ""} · +{Math.round(pct / 10)} XP
           </p>
-          <p className="mt-1 text-sm font-medium text-indigo-700 dark:text-[#4fc1ff]">
+          <p className="mt-1 text-sm font-medium text-indigo-700 dark:text-[#8db8ff]">
             {pct === 100 ? "Perfect!" : pct >= 60 ? "Passed! Lesson marked complete." : "Keep going - retry to pass (60%+)."}
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -315,7 +315,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
               <button
                 type="button"
                 onClick={() => restart("mixed")}
-                className="rounded-xl border border-indigo-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-400/40 dark:bg-transparent dark:text-[#4fc1ff]"
+                className="rounded-xl border border-indigo-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-400/40 dark:bg-transparent dark:text-[#8db8ff]"
               >
                 Try Mixed (all types)
               </button>
@@ -374,9 +374,9 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
     <div>
       {chips}
 
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#3c3c3c] dark:bg-[#252526]">
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#243652] dark:bg-[#0d1a2d]">
         <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <span className="font-bold uppercase tracking-wider text-indigo-600 dark:text-[#4fc1ff]">
+          <span className="font-bold uppercase tracking-wider text-indigo-600 dark:text-[#8db8ff]">
             {MODES.find((m) => m.id === current.t)?.label ?? "Question"}
           </span>
           <span>
@@ -432,7 +432,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
               {current.data.def}
             </p>
             {identHints > 0 ? (
-              <p className="mt-2 font-mono text-lg tracking-[0.3em] text-indigo-700 dark:text-[#4fc1ff]">
+              <p className="mt-2 font-mono text-lg tracking-[0.3em] text-indigo-700 dark:text-[#8db8ff]">
                 {maskTerm(current.data.term, identHints)}
               </p>
             ) : null}
@@ -537,7 +537,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
             </p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Click a term, then its definition (or the other way around). Correct pairs lock in{" "}
-              <span className="font-semibold text-indigo-600 dark:text-[#4fc1ff]">their own color</span>; wrong picks flash red.
+              <span className="font-semibold text-indigo-600 dark:text-[#8db8ff]">their own color</span>; wrong picks flash red.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {/* terms column */}
@@ -560,7 +560,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
                           : isFlash
                             ? "border-rose-500 bg-rose-50 text-rose-700 dark:border-rose-400/60 dark:bg-rose-500/10 dark:text-rose-300"
                             : isSel
-                              ? "border-indigo-500 bg-indigo-50 text-indigo-900 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#252526]"
+                              ? "border-indigo-500 bg-indigo-50 text-indigo-900 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#0d1a2d]"
                               : "cursor-pointer border-slate-200 bg-white text-slate-700 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:border-indigo-400"
                       }`}
                     >
@@ -596,7 +596,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
                           : isFlash
                             ? "border-rose-500 bg-rose-50 text-rose-700 dark:border-rose-400/60 dark:bg-rose-500/10 dark:text-rose-300"
                             : isSel
-                              ? "border-indigo-500 bg-indigo-50 text-slate-800 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#252526]"
+                              ? "border-indigo-500 bg-indigo-50 text-slate-800 ring-2 ring-indigo-400 ring-offset-1 dark:bg-indigo-500/20 dark:text-white dark:ring-offset-[#0d1a2d]"
                               : "cursor-pointer border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-sm dark:border-slate-700 dark:bg-transparent dark:text-slate-300 dark:hover:border-indigo-400"
                       }`}
                     >

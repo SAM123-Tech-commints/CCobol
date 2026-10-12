@@ -74,7 +74,7 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
   }
 
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className="min-h-screen bg-[#07111f]">
       <Navbar active="compiler" />
 
       <section className="mx-auto max-w-7xl px-4 py-8">

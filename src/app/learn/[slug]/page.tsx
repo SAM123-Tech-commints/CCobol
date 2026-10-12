@@ -36,7 +36,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   const moduleLessons = modules.find((m) => m.name === lesson.module)?.lessons ?? [];
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#07111f]">
       <Navbar active="tutorials" />
 
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[260px_minmax(0,1fr)]">

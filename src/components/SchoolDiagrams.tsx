@@ -7,7 +7,7 @@ export function CodingSheetDiagram() {
   return (
     <div className="my-3">
       <div className="flex overflow-hidden rounded-lg border border-slate-400 font-mono text-[10px] dark:border-slate-600 sm:text-[11px]">
-        <div className={`${cell} w-[10%] bg-slate-100 dark:bg-[#2d2d2d]`}>
+        <div className={`${cell} w-[10%] bg-slate-100 dark:bg-[#101d2f]`}>
           <span className="font-bold text-slate-700 dark:text-slate-200">1-6</span>
           <span className="text-slate-500 dark:text-slate-400">Sequence No.</span>
         </div>
@@ -16,14 +16,14 @@ export function CodingSheetDiagram() {
           <span className="text-slate-500 dark:text-slate-400">Ind.</span>
         </div>
         <div className={`${cell} w-[10%] bg-indigo-100 dark:bg-indigo-500/10`}>
-          <span className="font-bold text-indigo-700 dark:text-[#4fc1ff]">8-11</span>
+          <span className="font-bold text-indigo-700 dark:text-[#8db8ff]">8-11</span>
           <span className="text-slate-500 dark:text-slate-400">Area A</span>
         </div>
         <div className={`${cell} flex-1 bg-emerald-50 dark:bg-emerald-500/5`}>
           <span className="font-bold text-emerald-700 dark:text-emerald-300">12-72</span>
           <span className="text-slate-500 dark:text-slate-400">Area B</span>
         </div>
-        <div className={`${cell} w-[10%] bg-slate-100 dark:bg-[#2d2d2d]`}>
+        <div className={`${cell} w-[10%] bg-slate-100 dark:bg-[#101d2f]`}>
           <span className="font-bold text-slate-700 dark:text-slate-200">73-80</span>
           <span className="text-slate-500 dark:text-slate-400">System No.</span>
         </div>
@@ -41,11 +41,11 @@ export function StructureHierarchyDiagram() {
   const box = "rounded-lg border px-3 py-2 text-center font-mono text-xs font-semibold";
   return (
     <div className="my-3 space-y-1.5">
-      <div className={`${box} border-slate-400 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-[#2d2d2d] dark:text-slate-200`}>
+      <div className={`${box} border-slate-400 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-[#101d2f] dark:text-slate-200`}>
         COBOL Program
       </div>
       <div className="pl-4">
-        <div className={`${box} border-indigo-400 bg-indigo-50 text-indigo-800 dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-[#9cdcfe]`}>
+        <div className={`${box} border-indigo-400 bg-indigo-50 text-indigo-800 dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-[#6aa1ff]`}>
           DIVISION
         </div>
         <div className="pl-4">
@@ -65,7 +65,7 @@ export function StructureHierarchyDiagram() {
                   Statement
                 </div>
                 <div className="pl-4">
-                  <div className={`${box} border-slate-300 bg-white text-slate-600 dark:border-slate-600 dark:bg-[#252526] dark:text-slate-400`}>
+                  <div className={`${box} border-slate-300 bg-white text-slate-600 dark:border-slate-600 dark:bg-[#0d1a2d] dark:text-slate-400`}>
                     Character Strings
                   </div>
                 </div>
@@ -84,7 +84,7 @@ export function CustomerInfoTree() {
   return (
     <div className="my-3 overflow-x-auto">
       <div className="min-w-[420px]">
-        <div className={`${node} mx-auto w-fit border-indigo-400 bg-indigo-50 font-bold text-indigo-800 dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-[#9cdcfe]`}>
+        <div className={`${node} mx-auto w-fit border-indigo-400 bg-indigo-50 font-bold text-indigo-800 dark:border-indigo-500/50 dark:bg-indigo-500/10 dark:text-[#6aa1ff]`}>
           01 CUSTOMER-INFO
         </div>
         <div className="mx-auto w-fit">
@@ -108,7 +108,7 @@ export function CustomerInfoTree() {
                 <div className={`${node} ${group.color} font-bold`}>{group.top}</div>
                 <div className="h-3 w-px bg-slate-300 dark:bg-slate-600" />
                 {group.kids.map((k) => (
-                  <div key={k} className={`${node} bg-white text-slate-600 dark:bg-[#252526] dark:text-slate-400`}>
+                  <div key={k} className={`${node} bg-white text-slate-600 dark:bg-[#0d1a2d] dark:text-slate-400`}>
                     {k}
                   </div>
                 ))}

@@ -66,7 +66,7 @@ export default function ChallengeCard({ challenge }: { challenge: Challenge }) {
         value={code}
         onChange={(e) => setCode(e.target.value)}
         spellCheck={false}
-        className="mt-3 h-36 w-full resize-y rounded-xl border border-slate-700 bg-[#0b1220] p-3 font-mono text-[12px] leading-relaxed text-slate-200 outline-none focus:border-emerald-400"
+        className="mt-3 h-36 w-full resize-y rounded-xl border border-slate-700 bg-[#091524] p-3 font-mono text-[12px] leading-relaxed text-slate-200 outline-none focus:border-emerald-400"
       />
       <details className="mt-2 text-sm text-slate-500">
         <summary className="cursor-pointer text-indigo-600 hover:text-indigo-800">Show hint</summary>

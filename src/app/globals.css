@@ -1,18 +1,25 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
-/* class-based dark mode (toggled on <html>) */
+/* class-based dark variant (the site is permanently the navy theme) */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-}
-
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 html {
+  color-scheme: dark;
   scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #dfe9f6;
+  background:
+    radial-gradient(circle at 77% 0%, rgba(39, 105, 255, 0.14), transparent 32rem),
+    #07111f;
 }
 
 pre,
@@ -24,168 +31,280 @@ input.font-mono {
   font-family: var(--font-mono);
 }
 
-/* COBOL syntax highlighting tokens */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(75, 143, 255, 0.32);
+  color: #ffffff;
+}
+
+/* COBOL syntax highlighting tokens (template blues) */
 .t-kw {
-  color: #7dd3fc;
+  color: #8db8ff;
   font-weight: 600;
 }
 .t-str {
-  color: #86efac;
+  color: #7ee7c7;
 }
 .t-num {
-  color: #fcd34d;
+  color: #ffd88a;
 }
 .t-lvl {
-  color: #f0abfc;
+  color: #d5a6ff;
   font-weight: 600;
 }
 .t-cm {
-  color: #64748b;
+  color: #687b94;
   font-style: italic;
 }
 
 /* thin scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #94a3b8 transparent;
-}
-.dark * {
-  scrollbar-color: #3c3c3c transparent;
+  scrollbar-color: #22354f transparent;
 }
 pre::-webkit-scrollbar,
 textarea::-webkit-scrollbar,
 .overflow-auto::-webkit-scrollbar,
-.overflow-y-auto::-webkit-scrollbar {
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
   height: 10px;
   width: 10px;
 }
 pre::-webkit-scrollbar-thumb,
 textarea::-webkit-scrollbar-thumb,
 .overflow-auto::-webkit-scrollbar-thumb,
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #94a3b8;
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #22354f;
   border-radius: 999px;
 }
-.dark pre::-webkit-scrollbar-thumb,
-.dark textarea::-webkit-scrollbar-thumb,
-.dark .overflow-auto::-webkit-scrollbar-thumb,
-.dark .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #3c3c3c;
-}
 
-/* ------------------------------------------------------------------ */
-/* Dark theme (VS Code Dark+ palette) for the light Tailwind pages.   */
-/* The compiler/IDE panes are already dark and are left untouched.    */
-/* ------------------------------------------------------------------ */
-.dark {
-  color-scheme: dark;
-}
-.dark body {
-  background: #1e1e1e;
-  color: #d4d4d4;
-}
+/* ================================================================== */
+/* OpenCOBOL Studio design system (navy + blue template).              */
+/* Every Tailwind class the site uses is remapped to the template     */
+/* palette, so all pages adopt the new UI at once.                     */
+/* ================================================================== */
+
+/* ---------- backgrounds ---------- */
 .dark .bg-white {
-  background-color: #252526;
+  background-color: #0d1a2d;
 }
 .dark .bg-white\/95 {
-  background-color: rgba(30, 30, 30, 0.95);
+  background-color: rgba(7, 17, 31, 0.9);
+}
+.dark .bg-white\/90 {
+  background-color: rgba(7, 17, 31, 0.9);
 }
 .dark .bg-slate-50 {
-  background-color: #1e1e1e;
+  background-color: #0b1728;
 }
 .dark .bg-slate-100 {
-  background-color: #2d2d2d;
+  background-color: #101d2f;
 }
 .dark .bg-slate-200 {
-  background-color: #37373d;
+  background-color: #1a2c47;
+}
+.dark .bg-slate-700 {
+  background-color: #1d3355;
+}
+.dark .bg-slate-800 {
+  background-color: #16283f;
 }
 .dark .bg-slate-800\/60 {
-  background-color: rgba(45, 45, 45, 0.6);
+  background-color: rgba(22, 40, 63, 0.6);
+}
+.dark .bg-slate-900 {
+  background-color: #0a1526;
+}
+.dark .bg-black {
+  background-color: #091522;
 }
 .dark .bg-indigo-50 {
-  background-color: #23394f;
+  background-color: rgba(75, 143, 255, 0.1);
+}
+.dark .bg-indigo-50\/40 {
+  background-color: rgba(75, 143, 255, 0.06);
+}
+.dark .bg-indigo-50\/50 {
+  background-color: rgba(75, 143, 255, 0.07);
 }
 .dark .bg-indigo-50\/60 {
-  background-color: rgba(35, 57, 79, 0.6);
+  background-color: rgba(75, 143, 255, 0.09);
 }
 .dark .bg-indigo-100 {
-  background-color: #26435e;
+  background-color: rgba(75, 143, 255, 0.14);
+}
+.dark .bg-indigo-600 {
+  background-color: #4b8fff;
+}
+.dark .bg-indigo-600\/10 {
+  background-color: rgba(75, 143, 255, 0.12);
+}
+.dark .bg-indigo-500 {
+  background-color: #6aa1ff;
+}
+.dark .bg-indigo-500\/15 {
+  background-color: rgba(75, 143, 255, 0.15);
 }
 .dark .bg-emerald-50 {
-  background-color: #1d3b2f;
-}
-.dark .bg-rose-50 {
-  background-color: #3b2022;
-}
-.dark .bg-amber-50 {
-  background-color: #3a3320;
+  background-color: rgba(74, 222, 128, 0.09);
 }
 .dark .bg-emerald-100 {
-  background-color: #1d3b2f;
+  background-color: rgba(74, 222, 128, 0.14);
 }
+.dark .bg-emerald-500 {
+  background-color: #34d899;
+}
+.dark .bg-emerald-500\/15 {
+  background-color: rgba(74, 222, 128, 0.15);
+}
+.dark .bg-rose-50 {
+  background-color: rgba(248, 113, 113, 0.09);
+}
+.dark .bg-rose-100 {
+  background-color: rgba(248, 113, 113, 0.14);
+}
+.dark .bg-amber-50 {
+  background-color: rgba(251, 191, 36, 0.08);
+}
+.dark .bg-amber-100 {
+  background-color: rgba(251, 191, 36, 0.14);
+}
+.dark .bg-amber-500\/10 {
+  background-color: rgba(251, 191, 36, 0.1);
+}
+.dark .bg-sky-50 {
+  background-color: rgba(125, 177, 255, 0.08);
+}
+.dark .bg-sky-100 {
+  background-color: rgba(125, 177, 255, 0.12);
+}
+.dark .bg-sky-500\/10 {
+  background-color: rgba(125, 177, 255, 0.1);
+}
+
+/* ---------- borders ---------- */
 .dark .border-slate-100 {
-  border-color: #333333;
+  border-color: rgba(145, 167, 194, 0.1);
 }
 .dark .border-slate-200 {
-  border-color: #3c3c3c;
+  border-color: rgba(145, 167, 194, 0.14);
 }
 .dark .border-slate-300 {
-  border-color: #3c3c3c;
+  border-color: rgba(145, 167, 194, 0.22);
+}
+.dark .border-slate-700 {
+  border-color: rgba(127, 155, 189, 0.16);
+}
+.dark .border-slate-800 {
+  border-color: rgba(127, 155, 189, 0.12);
 }
 .dark .border-indigo-100 {
-  border-color: #2b4a63;
+  border-color: rgba(75, 143, 255, 0.16);
 }
 .dark .border-indigo-200 {
-  border-color: #2b4a63;
+  border-color: rgba(75, 143, 255, 0.2);
+}
+.dark .border-indigo-300 {
+  border-color: rgba(75, 143, 255, 0.28);
+}
+.dark .border-indigo-400 {
+  border-color: rgba(75, 143, 255, 0.4);
 }
 .dark .border-emerald-200 {
-  border-color: #2f5c48;
+  border-color: rgba(74, 222, 128, 0.25);
 }
 .dark .border-rose-200 {
-  border-color: #5c3336;
+  border-color: rgba(248, 113, 113, 0.25);
 }
 .dark .border-amber-200 {
-  border-color: #5c5333;
+  border-color: rgba(251, 191, 36, 0.25);
 }
+.dark .border-amber-300 {
+  border-color: rgba(251, 191, 36, 0.35);
+}
+.dark .border-sky-200 {
+  border-color: rgba(125, 177, 255, 0.25);
+}
+
+/* ---------- text ---------- */
 .dark .text-slate-900 {
-  color: #e8e8e8;
+  color: #f6f9fd;
 }
 .dark .text-slate-800 {
-  color: #dcdcdc;
+  color: #e6eef8;
 }
 .dark .text-slate-700 {
-  color: #cfcfcf;
+  color: #c9d6e6;
 }
 .dark .text-slate-600 {
-  color: #b8b8b8;
+  color: #9fb1c8;
 }
 .dark .text-slate-500 {
-  color: #9a9a9a;
+  color: #7d90a8;
 }
 .dark .text-slate-400 {
-  color: #818181;
+  color: #687b94;
+}
+.dark .text-slate-300 {
+  color: #c9d6e6;
+}
+.dark .text-slate-200 {
+  color: #dbe7f4;
+}
+.dark .text-slate-100 {
+  color: #eaf1fa;
 }
 .dark .text-indigo-600,
 .dark .text-indigo-700,
-.dark .text-indigo-800 {
-  color: #4fc1ff;
+.dark .text-indigo-800,
+.dark .text-indigo-900 {
+  color: #8db8ff;
 }
 .dark .text-emerald-700,
 .dark .text-emerald-800 {
-  color: #4ec9b0;
+  color: #4ade80;
+}
+.dark .text-emerald-300 {
+  color: #7ee7c7;
+}
+.dark .text-emerald-400 {
+  color: #4ade80;
 }
 .dark .text-rose-700,
 .dark .text-rose-800 {
-  color: #f14c4c;
+  color: #f87171;
+}
+.dark .text-rose-400 {
+  color: #f87171;
 }
 .dark .text-amber-800 {
-  color: #d7ba7d;
+  color: #fbbf24;
 }
+.dark .text-amber-300 {
+  color: #fbbf24;
+}
+.dark .text-sky-700,
+.dark .text-sky-800 {
+  color: #9dc1ff;
+}
+
+/* ---------- hovers / focus ---------- */
 .dark .hover\:bg-slate-50:hover {
-  background-color: #2d2d2d;
+  background-color: rgba(145, 167, 194, 0.07);
 }
 .dark .hover\:bg-slate-100:hover {
-  background-color: #2d2d2d;
+  background-color: rgba(145, 167, 194, 0.1);
+}
+.dark .hover\:bg-slate-700:hover {
+  background-color: #24405f;
+}
+.dark .hover\:bg-indigo-500:hover {
+  background-color: #6aa1ff;
 }
 .dark .hover\:text-slate-900:hover,
 .dark .hover\:text-slate-800:hover {
@@ -193,12 +312,43 @@ textarea::-webkit-scrollbar-thumb,
 }
 .dark .hover\:text-indigo-700:hover,
 .dark .hover\:text-indigo-800:hover {
-  color: #9cdcfe;
+  color: #a8c8ff;
 }
+.dark .hover\:border-indigo-400:hover,
+.dark .hover\:border-indigo-300:hover {
+  border-color: #6aa1ff;
+}
+.dark .hover\:border-emerald-400:hover,
+.dark .hover\:border-emerald-300:hover {
+  border-color: #34d899;
+}
+.dark .focus\:border-indigo-400:focus {
+  border-color: #6aa1ff;
+}
+
+/* ---------- shadows ---------- */
 .dark .shadow-sm,
+.dark .shadow,
 .dark .shadow-md,
 .dark .shadow-lg,
 .dark .shadow-xl,
 .dark .shadow-2xl {
-  --tw-shadow-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 30px rgba(2, 8, 18, 0.35);
+}
+.dark .shadow-lg {
+  box-shadow: 0 16px 50px rgba(2, 8, 18, 0.45);
+}
+.dark .shadow-xl {
+  box-shadow: 0 22px 60px rgba(2, 8, 18, 0.5);
+}
+
+/* ---------- rings / link decoration ---------- */
+.dark .ring-indigo-100 {
+  --tw-ring-color: rgba(75, 143, 255, 0.18);
+}
+.dark .decoration-indigo-300 {
+  text-decoration-color: rgba(75, 143, 255, 0.4);
+}
+.dark .decoration-indigo-400 {
+  text-decoration-color: rgba(75, 143, 255, 0.4);
 }

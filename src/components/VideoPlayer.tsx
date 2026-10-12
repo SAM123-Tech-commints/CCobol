@@ -121,7 +121,7 @@ export default function VideoPlayer({ source }: { source: LessonVideo }) {
   const pct = duration ? (current / duration) * 100 : 0;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-lg dark:border-[#3c3c3c]">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-lg dark:border-[#243652]">
       {/* player */}
       <div className="relative aspect-video w-full bg-black">
         {isYouTube ? (
