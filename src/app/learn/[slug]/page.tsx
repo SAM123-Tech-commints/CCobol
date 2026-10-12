@@ -44,7 +44,20 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         <aside className="side card hidden lg:block">
           <SidebarNav
             current={slug}
-            modules={modules.map((m) => ({ name: m.name, lessons: m.lessons.map((l) => ({ slug: l.slug, title: l.title })) }))}
+            modules={modules.map((m) => ({
+              name: m.name,
+              lessons: m.lessons.map((l) => ({
+                slug: l.slug,
+                title: l.title,
+                subs: l.body
+                  .replace(/\r\n?/g, "\n")
+                  .split("\n")
+                  .filter((line) => /^\s*#{1,6}\s+/.test(line))
+                  .map((line) => line.replace(/^\s*#{1,6}\s+/, "").replace(/\*\*/g, "").trim())
+                  .filter(Boolean)
+                  .map((title) => ({ anchor: slugify(title), title })),
+              })),
+            }))}
           />
         </aside>
 

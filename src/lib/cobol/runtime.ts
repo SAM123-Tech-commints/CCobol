@@ -1447,7 +1447,21 @@ class Interp {
           case "SPACES":
             result = text.trim().length === 0;
             break;
-          default:
+      case "SUBSTITUTE": {
+        // FUNCTION SUBSTITUTE(str, from, to[, from, to, ...])
+        let s = str(0);
+        for (let i = 1; i + 1 < args.length; i += 2) {
+          const from = str(i);
+          const to = str(i + 1);
+          s = s.split(from).join(to);
+        }
+        text = s;
+        break;
+      }
+      case "CONCAT":
+        text = args.map((a) => a.text).join("");
+        break;
+      default:
             result = false;
         }
         return c.neg ? !result : result;

@@ -213,6 +213,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             setAwaitingInput(false);
             for (const e of data.errors ?? []) print([{ kind: "err", text: `error: ${e}` }]);
           } else if (starved && roundsRef.current < MAX_INTERACTIVE_ROUNDS) {
+            // Program is patiently waiting for input, like a real GnuCOBOL console.
+            print([{ kind: "sys", text: "(waiting for input - type it and press Enter)" }]);
             setAwaitingInput(true);
           } else {
             setAwaitingInput(false);
@@ -356,11 +358,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         return;
       }
       if (cmd === "run") {
+        // Like GnuCOBOL's cobc -x prog.cbl && ./prog: auto-compile if needed.
         if (!compiledRef.current) {
-          print([{ kind: "err", text: "nothing compiled yet - compile first:  cobc -x -free HelloWorld.cbl" }]);
-          return;
+          if (!compileDocs(cobolDocs, defaultExe)) return;
         }
-        shellRun(compiledRef.current);
+        shellRun(compiledRef.current ?? defaultExe);
         return;
       }
       if (cmd.startsWith("./")) {
