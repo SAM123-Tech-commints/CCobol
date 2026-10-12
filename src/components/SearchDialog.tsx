@@ -26,6 +26,7 @@ export default function SearchDialog({ open, onClose }: { open: boolean; onClose
   const [active, setActive] = useState(0);
   const [index, setIndex] = useState<SearchEntry[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const router = useRouter();
 
   // Load the (large) search index lazily - only when search is first opened.
@@ -61,6 +62,11 @@ export default function SearchDialog({ open, onClose }: { open: boolean; onClose
   }, [open]);
 
   useEffect(() => setActive(0), [q]);
+
+  // Keep the keyboard-highlighted result visible while navigating with ↑/↓.
+  useEffect(() => {
+    itemRefs.current[active]?.scrollIntoView({ block: "nearest" });
+  }, [active, results]);
 
   const go = (entry?: SearchEntry) => {
     const target = entry ?? results[active];
@@ -112,6 +118,9 @@ export default function SearchDialog({ open, onClose }: { open: boolean; onClose
             results.map((r, i) => (
               <button
                 key={`${r.kind}-${r.href}-${i}`}
+                ref={(el) => {
+                  itemRefs.current[i] = el;
+                }}
                 type="button"
                 className={i === active ? "search-result active" : "search-result"}
                 onMouseEnter={() => setActive(i)}

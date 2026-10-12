@@ -35,6 +35,8 @@ interface RunResult {
   runMs: number;
   /** Output length when the program first ran out of stdin (real-console pause point). */
   inputStarvedAt?: number | null;
+  /** Output offset of every ACCEPT that consumed a line of stdin (echo anchors). */
+  acceptPoints?: number[];
 }
 
 interface Props {
