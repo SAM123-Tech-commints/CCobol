@@ -20,6 +20,8 @@ export interface RunResult {
   runMs: number;
   /** Output length when the program first ran out of stdin (the interactive pause point). */
   inputStarvedAt: number | null;
+  /** Output offset of every ACCEPT that consumed a line of stdin (echo anchors for the terminal). */
+  acceptPoints: number[];
 }
 
 export class CobolError extends Error {
@@ -81,6 +83,7 @@ export function run(source: string, options: RunOptions = {}): RunResult {
     warnings: [...new Set(interp.warnings)],
     runMs: Date.now() - started,
     inputStarvedAt: interp.inputStarvedAt,
+    acceptPoints: interp.acceptPoints,
   };
 }
 
@@ -111,6 +114,8 @@ class Interp {
   private stdinPos = 0;
   /** Output length when stdin first ran out (null = never). */
   inputStarvedAt: number | null = null;
+  /** Output offset at every ACCEPT that consumed a stdin line (for terminal echo merging). */
+  acceptPoints: number[] = [];
   private fs = new Map<string, string[]>();
   private openFiles = new Map<string, OpenFile>();
   private signs = new Map<string, number>();
@@ -432,6 +437,7 @@ class Interp {
           this.warnings.push(`Line ${st.line}: ACCEPT read past the end of the standard input (spaces used).`);
           this.assign(st.target, { text: " ", numeric: false, num: 0 });
         } else {
+          this.acceptPoints.push(this.out.join("").length);
           this.assign(st.target, { text: line, numeric: false, num: parseFloat(line.trim()) || 0 });
         }
         return;

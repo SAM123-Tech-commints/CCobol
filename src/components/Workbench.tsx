@@ -4,13 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { highlightCobol } from "@/lib/cobol/highlight";
 import { parseSource } from "@/lib/cobol/units";
 import {
+  ClockIcon,
   DownloadIcon,
   FileCodeIcon,
   FileIcon,
+  GearIcon,
   PencilIcon,
   PlayIcon,
   PlusIcon,
   SaveIcon,
+  TrashIcon,
   UploadIcon,
   XIcon,
 } from "@/components/icons";
@@ -69,6 +72,90 @@ interface DocFile {
 
 type TermLine = { kind: "out" | "in" | "sys" | "err"; text: string };
 
+interface HistoryEntry {
+  id: string;
+  ts: number;
+  title: string;
+  docs: DocFile[];
+  stdin: string;
+  ok: boolean;
+  runMs: number;
+}
+
+export interface WorkbenchSettings {
+  editorFont: number;
+  termFont: number;
+  tabSize: number;
+  wrap: boolean;
+  autoHistory: boolean;
+  autoWorkspace: boolean;
+}
+
+const DEFAULT_SETTINGS: WorkbenchSettings = {
+  editorFont: 13,
+  termFont: 12,
+  tabSize: 4,
+  wrap: false,
+  autoHistory: true,
+  autoWorkspace: true,
+};
+
+const SETTINGS_KEY = "ocb-settings";
+const HISTORY_KEY = "ocb-run-history";
+const WORKSPACE_KEY = "ocb-workspace";
+const HISTORY_LIMIT = 25;
+
+/** Same empty-trailing-line filter the engine uses, so prefill line counts match ACCEPT consumption. */
+function countPrefill(s: string): number {
+  if (!s) return 0;
+  return s.split("\n").filter((l, i, arr) => i < arr.length - 1 || l.length > 0).length;
+}
+
+function timeAgo(ts: number): string {
+  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
+/** Build terminal lines from program output, merging every typed input onto the
+ *  prompt line that consumed it. points[i] is the output offset of the ACCEPT that
+ *  consumed stdin line i (prefill lines come first, then user-typed echoes). */
+function renderTranscript(visible: string, points: number[], echoes: string[], prefillCount: number): TermLine[] {
+  const lines: TermLine[] = [];
+  let current = "";
+  let cursor = 0;
+  const flush = () => {
+    lines.push({ kind: "out", text: current });
+    current = "";
+  };
+  for (let i = 0; i < points.length; i++) {
+    const p = Math.min(Math.max(points[i], cursor), visible.length);
+    for (const ch of visible.slice(cursor, p)) {
+      if (ch === "\n") flush();
+      else current += ch;
+    }
+    cursor = p;
+    const ei = i - prefillCount;
+    if (ei >= 0 && ei < echoes.length) {
+      const echo = echoes[ei];
+      if (current !== "" && !current.endsWith(" ") && !echo.startsWith(" ")) current += " ";
+      current += echo;
+    }
+  }
+  for (const ch of visible.slice(cursor)) {
+    if (ch === "\n") flush();
+    else current += ch;
+  }
+  flush();
+  return lines;
+}
+
 function kindOf(name: string): "cobol" | "data" {
   return /\.(cbl|cob)$/i.test(name) ? "cobol" : "data";
 }
@@ -102,6 +189,10 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [awaitingInput, setAwaitingInput] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [exeName, setExeName] = useState<string | null>(null);
+  const [settings, setSettings] = useState<WorkbenchSettings>(DEFAULT_SETTINGS);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -109,13 +200,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const termEndRef = useRef<HTMLDivElement>(null);
   const termInputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
-  const termOutputRef = useRef("");
   const echoRef = useRef<string[]>([]);
   const roundsRef = useRef(0);
   const stdinAccRef = useRef(initialStdin || "");
   const prefillRef = useRef(initialStdin || "");
   const writtenRef = useRef<Record<string, string>>({});
   const compiledRef = useRef<string | null>(null);
+  const hydratedRef = useRef(false);
   const MAX_INTERACTIVE_ROUNDS = 12;
 
   useEffect(() => {
@@ -133,6 +224,30 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
   const safeActive = Math.min(active, docs.length - 1);
   const activeDoc = docs[safeActive];
+
+  /** Snapshot the current program into local run history. */
+  const rememberRun = useCallback(
+    (ok: boolean, runMs: number) => {
+      if (!settings.autoHistory) return;
+      setHistory((prev) => {
+        const entry: HistoryEntry = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          ts: Date.now(),
+          title: title || activeDoc.name,
+          docs,
+          stdin: prefillRef.current,
+          ok,
+          runMs,
+        };
+        const next = [entry, ...prev].slice(0, HISTORY_LIMIT);
+        try {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    },
+    [activeDoc, docs, settings.autoHistory, title],
+  );
 
   const highlighted = useMemo(
     () => (activeDoc.kind === "cobol" ? highlightCobol(activeDoc.content) : escapeHtml(activeDoc.content)),
@@ -156,13 +271,61 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     setTermLines((prev) => [...prev, ...lines]);
   }, []);
 
-  /** Execute the compiled program. fresh=true resets the run; otherwise output is appended (live ACCEPT input). */
+  // Hydrate settings + local history + last workspace from this browser.
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem(SETTINGS_KEY);
+      if (s) setSettings({ ...DEFAULT_SETTINGS, ...(JSON.parse(s) as Partial<WorkbenchSettings>) });
+      const h = localStorage.getItem(HISTORY_KEY);
+      if (h) setHistory(JSON.parse(h) as HistoryEntry[]);
+      const shares = typeof window !== "undefined" ? window.location.search : "";
+      const restore = localStorage.getItem(WORKSPACE_KEY);
+      if (restore && !initialCode && !shares.includes("share=") && !shares.includes("example=") && !shares.includes("code=")) {
+        const ws = JSON.parse(restore) as { title?: string; docs?: DocFile[]; active?: number };
+        if (ws.docs && ws.docs.length && ws.docs.every((d) => d && typeof d.name === "string" && typeof d.content === "string")) {
+          setDocs(ws.docs.map((d) => ({ ...d, kind: kindOf(d.name) })));
+          setActive(Math.min(ws.active ?? 0, ws.docs.length - 1));
+          if (ws.title) setTitle(ws.title);
+          print([{ kind: "sys", text: "restored your last workspace from this browser. Select Settings to start fresh." }]);
+        }
+      }
+    } catch {
+      // corrupted local data must never break the editor
+    }
+    setTimeout(() => {
+      hydratedRef.current = true;
+    }, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist settings.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch {}
+  }, [settings]);
+
+  // Autosave the workspace (debounced) so a refresh never loses code.
+  useEffect(() => {
+    if (!hydratedRef.current || !settings.autoWorkspace) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(WORKSPACE_KEY, JSON.stringify({ title, docs, active }));
+      } catch {}
+    }, 800);
+    return () => clearTimeout(t);
+  }, [docs, title, active, settings.autoWorkspace]);
+
+  /** Execute the compiled program. fresh=true restarts it; every round re-renders the
+   *  whole transcript deterministically from the engine's output (echoes merged onto the
+   *  prompt lines that consumed them), so prompts can never duplicate or drift. */
   const runWith = useCallback(
     async (stdinVal: string, fresh: boolean, exe: string) => {
       if (!isCobol) {
         setError(null);
         setAwaitingInput(false);
-        setResult({ output: "", fileOutput: {}, errors: ["Only COBOL is supported here."], warnings: [], runMs: 0 });
+        setResult({ output: "", fileOutput: {}, errors: ["Only COBOL is supported here."], warnings: [], runMs: 0, inputStarvedAt: null, acceptPoints: [] });
         return;
       }
       if (fresh) {
@@ -171,7 +334,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         // Fresh run restarts input from the prefill (shared/example stdin),
         // so old typed lines never leak into the new execution.
         stdinAccRef.current = prefillRef.current;
-        termOutputRef.current = "";
+        writtenRef.current = {};
         setResult(null);
       }
       setRunning(true);
@@ -191,36 +354,41 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           setResult(data);
           const starved = (data.warnings ?? []).some((w) => w.includes(STARVED_MARKER));
           const willPause = starved && (data.errors ?? []).length === 0 && roundsRef.current < MAX_INTERACTIVE_ROUNDS;
+          const fullOut = data.output ?? "";
           // Show the program only up to the point where it asked for input -
           // exactly like a real interactive console that halts at ACCEPT.
-          const out = willPause && typeof data.inputStarvedAt === "number" ? data.output.slice(0, data.inputStarvedAt) : (data.output ?? "");
-          const prevOut = termOutputRef.current;
-          if (fresh || !out.startsWith(prevOut)) {
-            const rebuilt: TermLine[] = [];
-            for (const echo of echoRef.current) rebuilt.push({ kind: "in", text: `› ${echo}` });
-            for (const line of out.split("\n")) rebuilt.push({ kind: "out", text: line });
-            print(rebuilt);
-          } else if (out.length > prevOut.length) {
-            const delta = out.slice(prevOut.length).split("\n");
-            print(delta.map((text) => ({ kind: "out" as const, text })));
-          }
-          termOutputRef.current = out;
-          for (const [name, content] of Object.entries(data.fileOutput ?? {})) {
-            writtenRef.current[name] = content;
-            print([{ kind: "sys", text: `wrote ${name} (${content.length} bytes) - type 'cat ${name}' to view` }]);
-          }
+          const visible = willPause && typeof data.inputStarvedAt === "number" ? fullOut.slice(0, data.inputStarvedAt) : fullOut;
+          const rendered = renderTranscript(visible, data.acceptPoints ?? [], echoRef.current, countPrefill(prefillRef.current));
+          for (const [name, content] of Object.entries(data.fileOutput ?? {})) writtenRef.current[name] = content;
+          const wroteLines: TermLine[] = Object.entries(writtenRef.current).map(([name, content]) => ({
+            kind: "sys" as const,
+            text: `wrote ${name} (${content.length} bytes) - type 'cat ${name}' to view`,
+          }));
+          const tail: TermLine[] = [...wroteLines];
           if ((data.errors ?? []).length) {
-            setAwaitingInput(false);
-            for (const e of data.errors ?? []) print([{ kind: "err", text: `error: ${e}` }]);
-          } else if (starved && roundsRef.current < MAX_INTERACTIVE_ROUNDS) {
-            // Program is patiently waiting for input, like a real GnuCOBOL console.
-            print([{ kind: "sys", text: "(waiting for input - type it and press Enter)" }]);
-            setAwaitingInput(true);
+            for (const e of data.errors ?? []) tail.push({ kind: "err", text: `error: ${e}` });
+          } else if (willPause) {
+            tail.push({ kind: "sys", text: "(waiting for input - type it and press Enter)" });
+          } else if (starved) {
+            tail.push({ kind: "sys", text: "input limit reached - type 'run' with fewer ACCEPTs, or prefill via a data file." });
           } else {
-            setAwaitingInput(false);
-            if (starved) print([{ kind: "sys", text: "input limit reached - type 'run' with fewer ACCEPTs, or prefill via a data file." }]);
-            else print([{ kind: "sys", text: `'${exe}' exited in ${data.runMs} ms` }]);
+            tail.push({ kind: "sys", text: `'${exe}' exited in ${data.runMs} ms` });
           }
+          // Replace everything after the last "$ ./prog" invocation line: the
+          // shell history above stays put, the program transcript below is
+          // rebuilt from scratch - duplicates are impossible by construction.
+          setTermLines((prev) => {
+            let cut = prev.length;
+            for (let i = prev.length - 1; i >= 0; i--) {
+              if (prev[i].kind === "sys" && prev[i].text.startsWith("$ ")) {
+                cut = i + 1;
+                break;
+              }
+            }
+            return [...prev.slice(0, cut), ...rendered, ...tail];
+          });
+          setAwaitingInput((data.errors ?? []).length === 0 && willPause);
+          if (fresh) rememberRun((data.errors ?? []).length === 0, data.runMs);
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not run the program.");
@@ -228,7 +396,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         setRunning(false);
       }
     },
-    [combinedCode, dataFiles, isCobol, print],
+    [combinedCode, dataFiles, isCobol, print, rememberRun],
   );
 
   /** GnuCOBOL-style compile: genuine syntax check in the browser, no execution. */
@@ -383,19 +551,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     const line = inputValue;
     setInputValue("");
     if (awaitingInput) {
-      // Merge the typed text onto the program's prompt line (like a real
-      // terminal: "What is your name Derek"), instead of a separate line.
-      setTermLines((prev) => {
-        const next = [...prev];
-        for (let i = next.length - 1; i >= 0; i--) {
-          if (next[i].kind === "out" && next[i].text.trim() !== "") {
-            const sep = next[i].text.endsWith(" ") ? "" : " ";
-            next[i] = { ...next[i], text: `${next[i].text}${sep}${line}` };
-            break;
-          }
-        }
-        return next;
-      });
       echoRef.current.push(line);
       roundsRef.current += 1;
       const acc = stdinAccRef.current;
@@ -422,7 +577,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     setTermLines(hint ? [...SHELL_WELCOME, { kind: "sys", text: hint }] : [...SHELL_WELCOME]);
     setAwaitingInput(false);
     setInputValue("");
-    termOutputRef.current = "";
     echoRef.current = [];
     roundsRef.current = 0;
     stdinAccRef.current = "";
@@ -445,6 +599,36 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     prefillRef.current = example.stdin ?? "";
     stdinAccRef.current = example.stdin ?? "";
     resetTerminal(`Loaded '${example.name}' - compile it:  cobc -x -free ${example.id}.cbl`);
+  };
+
+  /** Restore a run-history snapshot: files, title and stdin prefill. */
+  const restoreEntry = (entry: HistoryEntry) => {
+    resetTerminal(`Restored '${entry.title}' from local history.`);
+    setDocs(entry.docs.map((d) => ({ ...d, kind: kindOf(d.name) })));
+    setActive(0);
+    setTitle(entry.title);
+    prefillRef.current = entry.stdin ?? "";
+    stdinAccRef.current = entry.stdin ?? "";
+    setResult(null);
+    setShareUrl(null);
+    setShowHistory(false);
+  };
+
+  const deleteEntry = (id: string) => {
+    setHistory((prev) => {
+      const next = prev.filter((e) => e.id !== id);
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    try {
+      localStorage.removeItem(HISTORY_KEY);
+    } catch {}
   };
 
   const save = async () => {
@@ -554,9 +738,10 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       const start = ta.selectionStart;
       const end = ta.selectionEnd;
       const content = activeDoc.content;
-      updateActive(`${content.slice(0, start)}    ${content.slice(end)}`);
+      const indent = " ".repeat(settings.tabSize);
+      updateActive(`${content.slice(0, start)}${indent}${content.slice(end)}`);
       requestAnimationFrame(() => {
-        ta.selectionStart = ta.selectionEnd = start + 4;
+        ta.selectionStart = ta.selectionEnd = start + settings.tabSize;
       });
     }
   };
@@ -618,6 +803,76 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <SaveIcon width={12} height={12} />
               {saving ? "Saving…" : "Save"}
             </span>
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setShowHistory((v) => !v);
+                setShowSettings(false);
+              }}
+              title="Local run history (saved in this browser)"
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                showHistory ? "border-indigo-400 text-white" : "border-slate-600 text-slate-200 hover:border-indigo-400 hover:text-white"
+              }`}
+            >
+              <ClockIcon width={12} height={12} />
+              History{history.length ? ` (${history.length})` : ""}
+            </button>
+            {showHistory ? (
+              <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-80 overflow-auto rounded-lg border border-slate-600 bg-[#0b1625] p-2 shadow-2xl">
+                <div className="flex items-center justify-between px-1 pb-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Local history</p>
+                  {history.length ? (
+                    <button
+                      type="button"
+                      onClick={clearHistory}
+                      className="text-[11px] font-semibold text-rose-400 hover:text-rose-300"
+                    >
+                      Clear all
+                    </button>
+                  ) : null}
+                </div>
+                {history.length === 0 ? (
+                  <p className="px-1 py-3 text-xs text-slate-500">
+                    No runs saved yet. Every time you press Run, a snapshot of your program is kept here (this browser only).
+                  </p>
+                ) : (
+                  history.map((entry) => (
+                    <div key={entry.id} className="group flex items-center gap-1 rounded-md px-1 hover:bg-slate-800">
+                      <button type="button" onClick={() => restoreEntry(entry)} className="min-w-0 flex-1 py-1 text-left">
+                        <p className="truncate text-xs font-semibold text-slate-200">{entry.title}</p>
+                        <p className="font-mono text-[10px] text-slate-500">
+                          {timeAgo(entry.ts)} · {entry.ok ? `ran in ${entry.runMs} ms` : "had errors"} · {entry.docs.length} file(s)
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteEntry(entry.id)}
+                        title="Delete entry"
+                        className="rounded p-1 text-slate-500 opacity-0 transition hover:bg-slate-700 hover:text-rose-300 group-hover:opacity-100"
+                      >
+                        <XIcon width={12} height={12} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSettings((v) => !v);
+              setShowHistory(false);
+            }}
+            title="Compiler settings"
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+              showSettings ? "border-indigo-400 text-white" : "border-slate-600 text-slate-200 hover:border-indigo-400 hover:text-white"
+            }`}
+          >
+            <GearIcon width={12} height={12} />
+            Settings
           </button>
         </div>
 
@@ -740,7 +995,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <div className="relative flex max-h-[520px] min-h-[380px] flex-1">
                 <div
                   ref={gutterRef}
-                  className="hidden select-none overflow-hidden border-r border-slate-800 bg-[#0a1422] px-2 py-3 text-right font-mono text-[13px] leading-[1.55] text-slate-600 sm:block"
+                  className="hidden select-none overflow-hidden border-r border-slate-800 bg-[#0a1422] px-2 py-3 text-right font-mono text-slate-600 sm:block"
+                  style={{ fontSize: settings.editorFont, lineHeight: 1.55 }}
                 >
                   {Array.from({ length: lineCount }, (_, idx) => (
                     <div key={idx}>{idx + 1}</div>
@@ -750,7 +1006,10 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   <pre
                     ref={preRef}
                     aria-hidden
-                    className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre px-3 py-3 font-mono text-[13px] leading-[1.55] text-slate-200"
+                    className={`pointer-events-none absolute inset-0 overflow-hidden px-3 py-3 font-mono text-slate-200 ${
+                      settings.wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
+                    }`}
+                    style={{ fontSize: settings.editorFont, lineHeight: 1.55 }}
                   >
                     <code dangerouslySetInnerHTML={{ __html: `${highlighted}\n` }} />
                   </pre>
@@ -761,9 +1020,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                     onScroll={syncScroll}
                     onKeyDown={handleKeyDown}
                     spellCheck={false}
-                    wrap="off"
-                    className="relative h-full min-h-[380px] w-full resize-none overflow-auto whitespace-pre bg-transparent px-3 py-3 font-mono text-[13px] leading-[1.55] text-transparent caret-emerald-300 outline-none selection:bg-indigo-500/40"
-                    style={{ WebkitTextFillColor: "transparent" }}
+                    wrap={settings.wrap ? "soft" : "off"}
+                    className={`relative h-full min-h-[380px] w-full resize-none overflow-auto bg-transparent px-3 py-3 font-mono text-transparent caret-emerald-300 outline-none selection:bg-indigo-500/40 ${
+                      settings.wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
+                    }`}
+                    style={{ fontSize: settings.editorFont, lineHeight: 1.55, WebkitTextFillColor: "transparent" }}
                   />
                 </div>
               </div>
@@ -776,9 +1037,17 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">Terminal</p>
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
               {writtenFiles.length ? <span className="font-mono text-[10px] text-slate-500">{writtenFiles.length} file(s) written</span> : null}
+              <button
+                type="button"
+                onClick={() => setTermLines([])}
+                title="Clear terminal (like the 'clear' command)"
+                className="ml-auto rounded p-1 text-slate-500 transition hover:bg-slate-700 hover:text-slate-200"
+              >
+                <TrashIcon width={13} height={13} />
+              </button>
             </div>
             <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3" onClick={() => termInputRef.current?.focus()}>
-              <div className="font-mono text-xs leading-relaxed">
+              <div className="font-mono leading-relaxed" style={{ fontSize: settings.termFont }}>
                 {(() => {
                   // VS Code-style input: when the program waits for ACCEPT, the
                   // cursor sits directly at the end of the program's last
@@ -835,9 +1104,18 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                             autoFocus
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.ctrlKey && e.key === "c") {
+                                e.preventDefault();
+                                setAwaitingInput(false);
+                                setInputValue("");
+                                print([{ kind: "sys", text: "^C - input cancelled. Type 'run' to start the program again." }]);
+                              }
+                            }}
                             aria-label="Type program input"
                             placeholder={inline ? undefined : "Type input, Enter to send"}
-                            className="min-w-[80px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none placeholder:text-slate-600"
+                            className="min-w-[80px] flex-1 border-0 bg-transparent p-0 font-mono text-slate-100 caret-emerald-400 outline-none placeholder:text-slate-600"
+                            style={{ fontSize: settings.termFont }}
                           />
                         </form>
                       ) : !running ? (
@@ -855,8 +1133,15 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                             autoFocus
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.ctrlKey && e.key === "c") {
+                                e.preventDefault();
+                                setInputValue("");
+                              }
+                            }}
                             aria-label="Type a terminal command"
-                            className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-xs text-slate-100 caret-emerald-400 outline-none"
+                            className="min-w-[60px] flex-1 border-0 bg-transparent p-0 font-mono text-slate-100 caret-emerald-400 outline-none"
+                            style={{ fontSize: settings.termFont }}
                           />
                         </form>
                       ) : null}
@@ -892,6 +1177,95 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         </div>
       ) : null}
 
+      {showSettings ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowSettings(false)}>
+          <div
+            className="w-full max-w-md rounded-xl border border-slate-600 bg-[#0b1625] p-4 text-sm shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="font-bold text-white">Compiler settings</p>
+              <button type="button" onClick={() => setShowSettings(false)} className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                <XIcon width={14} height={14} />
+              </button>
+            </div>
+            <div className="space-y-3 text-xs text-slate-300">
+              <label className="flex items-center justify-between gap-3">
+                <span>Editor font size</span>
+                <span className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={11}
+                    max={20}
+                    value={settings.editorFont}
+                    onChange={(e) => setSettings((s) => ({ ...s, editorFont: Number(e.target.value) }))}
+                    className="w-36 accent-indigo-500"
+                  />
+                  <span className="w-9 text-right font-mono text-slate-400">{settings.editorFont}px</span>
+                </span>
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span>Terminal font size</span>
+                <span className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={10}
+                    max={18}
+                    value={settings.termFont}
+                    onChange={(e) => setSettings((s) => ({ ...s, termFont: Number(e.target.value) }))}
+                    className="w-36 accent-indigo-500"
+                  />
+                  <span className="w-9 text-right font-mono text-slate-400">{settings.termFont}px</span>
+                </span>
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span>Indent size (Tab key)</span>
+                <select
+                  value={settings.tabSize}
+                  onChange={(e) => setSettings((s) => ({ ...s, tabSize: Number(e.target.value) }))}
+                  className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-400"
+                >
+                  <option value={2}>2 spaces</option>
+                  <option value={4}>4 spaces</option>
+                  <option value={8}>8 spaces</option>
+                </select>
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <span>Wrap long lines in the editor</span>
+                <input
+                  type="checkbox"
+                  checked={settings.wrap}
+                  onChange={(e) => setSettings((s) => ({ ...s, wrap: e.target.checked }))}
+                  className="h-4 w-4 accent-indigo-500"
+                />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <span>Save every run to local history</span>
+                <input
+                  type="checkbox"
+                  checked={settings.autoHistory}
+                  onChange={(e) => setSettings((s) => ({ ...s, autoHistory: e.target.checked }))}
+                  className="h-4 w-4 accent-indigo-500"
+                />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <span>Keep my code between visits (this browser)</span>
+                <input
+                  type="checkbox"
+                  checked={settings.autoWorkspace}
+                  onChange={(e) => setSettings((s) => ({ ...s, autoWorkspace: e.target.checked }))}
+                  className="h-4 w-4 accent-indigo-500"
+                />
+              </label>
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+              Settings, history and your workspace are stored only in this browser (localStorage). Shortcuts: Ctrl+Enter to
+              run, Ctrl+C in the terminal to cancel program input.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {result && result.errors.length ? (
         <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
           <p className="mb-1 text-sm font-semibold text-rose-800">Compiler / runtime messages</p>
@@ -920,13 +1294,18 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           <li>ls - list files (compiled programs show as ./name)</li>
           <li>cat {"<file>"} - print a file, including files your program wrote</li>
           <li>cobc -x -free {"<file>"} [-o name] - compile & syntax-check (real errors, GnuCOBOL-style)</li>
-          <li>./{"<name>"} or run - execute; type live input when the program asks</li>
+          <li>./{"<name>"} or run - execute; type live input when the program asks (Ctrl+C cancels)</li>
           <li>clear - wipe the terminal</li>
         </ul>
         <p className="mt-2">
           Explorer: double-click a file (or the pencil button) to <strong>rename</strong>, use the upload button to add
           .cbl/.dat files from your computer, and the download button to save any file. Editing any file un-compiles the
           program - run <span className="font-mono">cobc</span> again (just like real GnuCOBOL).
+        </p>
+        <p className="mt-2">
+          <strong>History</strong> keeps a snapshot of every run in this browser - click one to restore its files.
+          <strong> Settings</strong> controls editor/terminal font size, indent size, line wrap and autosave. Ctrl+Enter
+          runs the program from anywhere.
         </p>
       </details>
     </div>
