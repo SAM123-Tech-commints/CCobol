@@ -1,9 +1,9 @@
 import Navbar from "@/components/Navbar";
+import Workbench from "@/components/Workbench";
+import { examples } from "@/content/examples";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { snippets } from "@/db/schema";
-import { examples } from "@/content/examples";
-import Workbench from "@/components/Workbench";
 
 export const dynamic = "force-dynamic";
 
@@ -74,23 +74,34 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
   }
 
   return (
-    <main className="min-h-screen bg-[#07111f]">
+    <div className="app-shell">
       <Navbar active="compiler" />
-
-      <section className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <main className="compiler-page" id="compiler">
+        <section className="intro">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Online COBOL Compiler</h1>
-            <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              A VS Code-style <strong>COBOL-only</strong> terminal in your browser - no installation, no sign-up.
-              Type <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">cobc -x -free prog.cbl</code> to
-              compile (real syntax errors, GnuCOBOL-style), then <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">./prog</code> to
-              run and type live input when <code className="rounded bg-slate-200 px-1 font-mono text-[12px]">ACCEPT</code> asks.
-              Manage <strong>.cbl + data files</strong> in the explorer: rename, upload, download. Other languages are
-              rejected - GnuCOBOL-compatible COBOL and nothing else.
+            <p className="eyebrow">
+              <span />
+              BROWSER-BASED COBOL IDE
+            </p>
+            <h1>Build something timeless.</h1>
+            <p className="intro-copy">
+              Write, compile and run COBOL in a modern workspace - the four divisions, PIC clauses, tables, files and
+              intrinsic functions, with GnuCOBOL-style <span className="font-mono">cobc</span> commands and live
+              terminal input. No setup, no legacy environment.
             </p>
           </div>
-        </div>
+          <div className="intro-meta">
+            <div>
+              <strong>GnuCOBOL</strong>
+              <span>Compiler runtime</span>
+            </div>
+            <div>
+              <strong>COBOL 85</strong>
+              <span>Language standard</span>
+            </div>
+          </div>
+        </section>
+
         <Workbench
           examples={examples.map((e) => ({ id: e.id, name: e.name, description: e.description, code: e.code, stdin: e.stdin, files: e.files }))}
           initialCode={code}
@@ -98,7 +109,28 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
           initialFiles={files}
           initialTitle={title}
         />
-      </section>
-    </main>
+
+        <section className="trust-row" aria-label="Platform highlights">
+          <p>
+            <span>01</span>
+            <strong>Compile instantly</strong>
+            <small>Production-grade GnuCOBOL workflow in your browser.</small>
+          </p>
+          <p>
+            <span>02</span>
+            <strong>Type live input</strong>
+            <small>ACCEPT pauses and waits - just like VS Code.</small>
+          </p>
+          <p>
+            <span>03</span>
+            <strong>Keep your flow</strong>
+            <small>A focused workspace without local setup.</small>
+          </p>
+        </section>
+      </main>
+      <footer className="site-footer">
+        <span>© 2025 OpenCOBOL Studio · Learn the language that runs the world.</span>
+      </footer>
+    </div>
   );
 }

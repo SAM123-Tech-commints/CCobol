@@ -36,18 +36,18 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
   const moduleLessons = modules.find((m) => m.name === lesson.module)?.lessons ?? [];
 
   return (
-    <main className="min-h-screen bg-[#07111f]">
+    <main className="min-h-screen">
       <Navbar active="tutorials" />
 
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="hidden lg:block">
+      <div className="page docs">
+        <aside className="side card hidden lg:block">
           <SidebarNav
             current={slug}
             modules={modules.map((m) => ({ name: m.name, lessons: m.lessons.map((l) => ({ slug: l.slug, title: l.title })) }))}
           />
         </aside>
 
-        <article className="min-w-0">
+        <article className="doc">
           <nav className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <Link href="/" className="hover:text-indigo-700">
               COBOL Tutorial

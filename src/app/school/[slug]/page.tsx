@@ -37,7 +37,7 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
   const lesson = getSchoolLesson(slug);
   if (!lesson) {
     return (
-      <main className="min-h-screen bg-[#07111f]">
+      <main className="min-h-screen">
         <Navbar active="school" />
         <div className="mx-auto max-w-3xl px-4 py-20 text-center">
           <h1 className="text-2xl font-bold dark:text-white">Lesson not found</h1>
@@ -52,9 +52,9 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
   const video = videoFor(slug);
 
   return (
-    <main className="min-h-screen bg-[#07111f]">
+    <main className="min-h-screen">
       <Navbar active="school" />
-      <div className="mx-auto max-w-4xl px-4 py-10">
+      <div className="page narrow">
         {/* breadcrumb */}
         <nav className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <Link href="/school" className="hover:text-indigo-700 dark:hover:text-white">

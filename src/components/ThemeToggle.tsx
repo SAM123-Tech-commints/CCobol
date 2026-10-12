@@ -3,35 +3,35 @@
 import { useEffect, useState } from "react";
 import { MoonIcon, SunIcon } from "@/components/icons";
 
-const KEY = "cobol-theme";
+const KEY = "ocb-theme";
 
-/** Light/Dark toggle (VS Code-style dark theme), persisted in this browser. */
+/** Light/dark theme toggle. Dark (template) is the default; saved per browser. */
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(KEY);
-    const isDark = stored ? stored === "dark" : true; // default: dark (VS Code feel)
-    setDark(isDark);
+    setDark(localStorage.getItem(KEY) !== "light");
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    document.documentElement.classList.toggle("dark", dark);
+    const root = document.documentElement;
+    root.classList.toggle("dark", dark);
+    root.setAttribute("data-theme", dark ? "dark" : "light");
     localStorage.setItem(KEY, dark ? "dark" : "light");
   }, [dark, ready]);
 
   return (
     <button
       type="button"
+      className="icon-button"
       onClick={() => setDark((d) => !d)}
       title={dark ? "Switch to light theme" : "Switch to dark theme"}
-      aria-label="Toggle theme"
-      className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+      aria-label="Toggle colour theme"
     >
-      {dark ? <SunIcon /> : <MoonIcon />}
+      {dark ? <SunIcon width={16} height={16} /> : <MoonIcon width={16} height={16} />}
     </button>
   );
 }
