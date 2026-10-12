@@ -1476,21 +1476,7 @@ class Interp {
           case "SPACES":
             result = text.trim().length === 0;
             break;
-      case "SUBSTITUTE": {
-        // FUNCTION SUBSTITUTE(str, from, to[, from, to, ...])
-        let s = str(0);
-        for (let i = 1; i + 1 < args.length; i += 2) {
-          const from = str(i);
-          const to = str(i + 1);
-          s = s.split(from).join(to);
-        }
-        text = s;
-        break;
-      }
-      case "CONCAT":
-        text = args.map((a) => a.text).join("");
-        break;
-      default:
+          default:
             result = false;
         }
         return c.neg ? !result : result;
@@ -1571,6 +1557,18 @@ class Interp {
         text = mode === "LEADING" ? base.replace(/^ +/, "") : mode === "TRAILING" ? base.replace(/ +$/, "") : base.trim();
         break;
       }
+      case "SUBSTITUTE": {
+        // FUNCTION SUBSTITUTE(str, from, to[, from, to, ...])
+        let s = str(0);
+        for (let i = 1; i + 1 < args.length; i += 2) {
+          s = s.split(str(i)).join(str(i + 1));
+        }
+        text = s;
+        break;
+      }
+      case "CONCAT":
+        text = args.map((a) => a.text).join("");
+        break;
       case "CHAR": {
         text = String.fromCharCode(Math.floor(n(0)));
         break;
