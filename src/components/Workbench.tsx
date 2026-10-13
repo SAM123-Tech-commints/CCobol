@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { highlightCobol } from "@/lib/cobol/highlight";
+import { highlightCobol, cobolKeywords } from "@/lib/cobol/highlight";
 import { parseSource } from "@/lib/cobol/units";
 import {
   ClockIcon,
@@ -96,6 +96,10 @@ export interface WorkbenchSettings {
   smartTab: boolean;
   /** Vertical margin guides for the COBOL coding sheet (Area A / Area B). */
   gridLines: boolean;
+  /** Word suggestions while typing (COBOL keywords, variables, paragraphs). */
+  autocomplete: boolean;
+  /** Editor colour theme id. */
+  editorTheme: string;
 }
 
 const DEFAULT_SETTINGS: WorkbenchSettings = {
@@ -107,7 +111,18 @@ const DEFAULT_SETTINGS: WorkbenchSettings = {
   autoWorkspace: true,
   smartTab: true,
   gridLines: true,
+  autocomplete: true,
+  editorTheme: "cobol",
 };
+
+/** Editor themes shown in Settings. */
+const EDITOR_THEMES: { id: string; label: string }[] = [
+  { id: "cobol", label: "COBOL Studio (default)" },
+  { id: "vscode-dark", label: "VS Code Dark+" },
+  { id: "monokai", label: "Monokai" },
+  { id: "dracula", label: "Dracula" },
+  { id: "light", label: "Light" },
+];
 
 const SETTINGS_KEY = "ocb-settings";
 const HISTORY_KEY = "ocb-run-history";
@@ -208,6 +223,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [sug, setSug] = useState<{ items: string[]; index: number; left: number; top: number; from: number } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -788,7 +804,95 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     if (gutterRef.current) gutterRef.current.scrollTop = ta.scrollTop;
   };
 
+  /** Editor autocomplete: suggest COBOL keywords, variables and paragraphs as you type. */
+  const computeSuggestions = (value: string, caret: number, force: boolean) => {
+    if (!settings.autocomplete) {
+      setSug(null);
+      return;
+    }
+    const before = value.slice(0, caret);
+    const m = before.match(/[A-Za-z][A-Za-z0-9-]*$/);
+    const prefix = m ? m[0] : "";
+    if (!prefix && !force) {
+      setSug(null);
+      return;
+    }
+    const up = prefix.toUpperCase();
+    const vars: string[] = [];
+    const paras: string[] = [];
+    for (const line of value.split("\n")) {
+      const dm = line.match(/^\s*\d{1,2}\s+([A-Za-z][A-Za-z0-9-]*)/);
+      if (dm) vars.push(dm[1].toUpperCase());
+      const pm = line.match(/^ {0,11}([A-Za-z][A-Za-z0-9-]*)\.\s*$/);
+      if (pm) paras.push(pm[1].toUpperCase());
+    }
+    const seen = new Set<string>();
+    const items: string[] = [];
+    for (const w of [...cobolKeywords, ...vars, ...paras]) {
+      const u = w.toUpperCase();
+      if (u === up || seen.has(u)) continue;
+      if (up && !u.startsWith(up)) continue;
+      seen.add(u);
+      items.push(u);
+      if (items.length >= 8) break;
+    }
+    if (!items.length) {
+      setSug(null);
+      return;
+    }
+    const ta = textareaRef.current;
+    const lineIdx = before.split("\n").length - 1;
+    const colIdx = caret - (before.lastIndexOf("\n") + 1);
+    const charW = settings.editorFont * 0.6;
+    const lineH = settings.editorFont * 1.55;
+    const left = 12 + colIdx * charW - (ta?.scrollLeft ?? 0);
+    const top = 12 + (lineIdx + 1) * lineH - (ta?.scrollTop ?? 0);
+    setSug({ items, index: 0, left, top, from: caret - prefix.length });
+  };
+
+  const acceptSuggestion = (item?: number) => {
+    if (!sug) return;
+    const word = sug.items[item ?? sug.index];
+    if (!word) return;
+    const ta = textareaRef.current;
+    const caret = ta ? ta.selectionStart : sug.from;
+    const next = activeDoc.content.slice(0, sug.from) + word + activeDoc.content.slice(caret);
+    const pos = sug.from + word.length;
+    updateActive(next);
+    setSug(null);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) textareaRef.current.selectionStart = textareaRef.current.selectionEnd = pos;
+    });
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (sug && sug.items.length) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSug({ ...sug, index: (sug.index + 1) % sug.items.length });
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSug({ ...sug, index: (sug.index - 1 + sug.items.length) % sug.items.length });
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        acceptSuggestion();
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSug(null);
+        return;
+      }
+    }
+    if (event.ctrlKey && event.code === "Space") {
+      event.preventDefault();
+      computeSuggestions(activeDoc.content, event.currentTarget.selectionStart, true);
+      return;
+    }
     if (event.key !== "Tab") return;
     event.preventDefault();
     const ta = event.currentTarget;
@@ -837,7 +941,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
-      <div className="doc-dark overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-2xl">
+      <div className={`doc-dark edtheme-${settings.editorTheme} overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-2xl`}>
         {/* top toolbar */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 bg-[#0b1625] px-3 py-2">
           <span className="mr-1 hidden items-center gap-1.5 sm:flex">
@@ -1079,14 +1183,14 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <div className="relative flex max-h-[520px] min-h-[380px] flex-1">
                 <div
                   ref={gutterRef}
-                  className="hidden select-none overflow-hidden border-r border-slate-800 bg-[#0a1422] px-2 py-3 text-right font-mono text-slate-600 sm:block"
+                  className="editor-gutter hidden select-none overflow-hidden border-r border-slate-800 px-2 py-3 text-right font-mono sm:block"
                   style={{ fontSize: settings.editorFont, lineHeight: 1.55 }}
                 >
                   {Array.from({ length: lineCount }, (_, idx) => (
                     <div key={idx}>{idx + 1}</div>
                   ))}
                 </div>
-                <div className="relative flex-1">
+                <div className="editor-code-area relative flex-1">
                   {settings.gridLines && !settings.wrap ? (
                     <div className="cobol-grid" aria-hidden>
                       {[7, 11, 72].map((c) => (
@@ -1097,7 +1201,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   <pre
                     ref={preRef}
                     aria-hidden
-                    className={`pointer-events-none absolute inset-0 overflow-hidden px-3 py-3 font-mono text-slate-200 ${
+                    className={`editor-pre pointer-events-none absolute inset-0 overflow-hidden px-3 py-3 font-mono ${
                       settings.wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
                     }`}
                     style={{ fontSize: settings.editorFont, lineHeight: 1.55 }}
@@ -1107,9 +1211,22 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   <textarea
                     ref={textareaRef}
                     value={activeDoc.content}
-                    onChange={(e) => updateActive(e.target.value)}
-                    onScroll={syncScroll}
+                    onChange={(e) => {
+                      setSug(null);
+                      updateActive(e.target.value);
+                      computeSuggestions(e.target.value, e.target.selectionStart, false);
+                    }}
+                    onScroll={() => {
+                      syncScroll();
+                      if (sug) setSug(null);
+                    }}
+                    onBlur={() => setSug(null)}
                     onKeyDown={handleKeyDown}
+                    onKeyUp={(e) => {
+                      if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+                        computeSuggestions(activeDoc.content, e.currentTarget.selectionStart, false);
+                      }
+                    }}
                     spellCheck={false}
                     wrap={settings.wrap ? "soft" : "off"}
                     className={`relative h-full min-h-[380px] w-full resize-none overflow-auto bg-transparent px-3 py-3 font-mono text-transparent caret-emerald-300 outline-none selection:bg-indigo-500/40 ${
@@ -1117,6 +1234,23 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                     }`}
                     style={{ fontSize: settings.editorFont, lineHeight: 1.55, WebkitTextFillColor: "transparent" }}
                   />
+                  {sug && sug.items.length ? (
+                    <ul className="cobol-suggest" style={{ left: sug.left, top: sug.top }}>
+                      {sug.items.map((w, i) => (
+                        <li
+                          key={w}
+                          className={i === sug.index ? "on" : ""}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onMouseEnter={() => {
+                            if (sug) setSug({ ...sug, index: i });
+                          }}
+                          onClick={() => acceptSuggestion(i)}
+                        >
+                          {w}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -1415,6 +1549,29 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   onChange={(e) => setSettings((s) => ({ ...s, gridLines: e.target.checked }))}
                   className="h-4 w-4 accent-indigo-500"
                 />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <span>Autocomplete - COBOL word suggestions while typing</span>
+                <input
+                  type="checkbox"
+                  checked={settings.autocomplete}
+                  onChange={(e) => setSettings((s) => ({ ...s, autocomplete: e.target.checked }))}
+                  className="h-4 w-4 accent-indigo-500"
+                />
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span>Editor theme</span>
+                <select
+                  value={settings.editorTheme}
+                  onChange={(e) => setSettings((s) => ({ ...s, editorTheme: e.target.value }))}
+                  className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-400"
+                >
+                  {EDITOR_THEMES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
             <p className="mt-3 text-[11px] leading-relaxed text-slate-500">

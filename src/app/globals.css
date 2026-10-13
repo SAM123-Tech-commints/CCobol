@@ -119,24 +119,121 @@ button {
   color: #fff;
 }
 
-/* syntax tokens */
+/* syntax tokens (colour comes from the active editor theme) */
 .t-kw {
-  color: #8db8ff;
+  color: var(--ed-kw, #8db8ff);
   font-weight: 600;
 }
 .t-str {
-  color: #7ee7c7;
+  color: var(--ed-str, #7ee7c7);
 }
 .t-num {
-  color: #ffd88a;
+  color: var(--ed-num, #ffd88a);
 }
 .t-lvl {
-  color: #d5a6ff;
+  color: var(--ed-lvl, #d5a6ff);
   font-weight: 600;
 }
 .t-cm {
-  color: #687b94;
+  color: var(--ed-cm, #687b94);
   font-style: italic;
+}
+.editor-code-area {
+  background: var(--ed-bg, transparent);
+}
+.editor-gutter {
+  color: var(--ed-gutter-fg, #64748b);
+  background: var(--ed-gutter, #0a1422);
+}
+.editor-pre {
+  color: var(--ed-fg, #e2e8f0);
+}
+
+/* editor colour themes (chosen in the compiler Settings) */
+.edtheme-cobol {
+  --ed-kw: #8db8ff;
+  --ed-str: #7ee7c7;
+  --ed-num: #ffd88a;
+  --ed-lvl: #d5a6ff;
+  --ed-cm: #687b94;
+  --ed-fg: #e2e8f0;
+  --ed-bg: transparent;
+  --ed-gutter: #0a1422;
+  --ed-gutter-fg: #64748b;
+}
+.edtheme-vscode-dark {
+  --ed-kw: #569cd6;
+  --ed-str: #ce9178;
+  --ed-num: #b5cea8;
+  --ed-lvl: #4ec9b0;
+  --ed-cm: #6a9955;
+  --ed-fg: #d4d4d4;
+  --ed-bg: #1e1e1e;
+  --ed-gutter: #1e1e1e;
+  --ed-gutter-fg: #858585;
+}
+.edtheme-monokai {
+  --ed-kw: #f92672;
+  --ed-str: #e6db74;
+  --ed-num: #ae81ff;
+  --ed-lvl: #a6e22e;
+  --ed-cm: #75715e;
+  --ed-fg: #f8f8f2;
+  --ed-bg: #272822;
+  --ed-gutter: #272822;
+  --ed-gutter-fg: #90908a;
+}
+.edtheme-dracula {
+  --ed-kw: #ff79c6;
+  --ed-str: #f1fa8c;
+  --ed-num: #bd93f9;
+  --ed-lvl: #50fa7b;
+  --ed-cm: #6272a4;
+  --ed-fg: #f8f8f2;
+  --ed-bg: #282a36;
+  --ed-gutter: #282a36;
+  --ed-gutter-fg: #6272a4;
+}
+.edtheme-light {
+  --ed-kw: #0550ae;
+  --ed-str: #0a3069;
+  --ed-num: #0550ae;
+  --ed-lvl: #953800;
+  --ed-cm: #6e7781;
+  --ed-fg: #1f2328;
+  --ed-bg: #ffffff;
+  --ed-gutter: #f6f8fa;
+  --ed-gutter-fg: #8c959f;
+}
+
+/* autocomplete popup */
+.cobol-suggest {
+  position: absolute;
+  z-index: 30;
+  min-width: 160px;
+  max-width: 260px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: #0e1a2b;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.cobol-suggest li {
+  padding: 5px 9px;
+  border-radius: 6px;
+  color: #cbd5e1;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cobol-suggest li.on {
+  background: var(--accent);
+  color: #fff;
 }
 
 * {

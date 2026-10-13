@@ -37,6 +37,9 @@ export function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** Sorted COBOL keyword list for editor autocomplete. */
+export const cobolKeywords: string[] = Array.from(KEYWORDS).sort();
+
 function isLevelNumber(token: string): boolean {
   return /^\d{1,2}$/.test(token);
 }
