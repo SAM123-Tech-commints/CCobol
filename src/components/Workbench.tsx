@@ -116,7 +116,7 @@ const DEFAULT_SETTINGS: WorkbenchSettings = {
   autoHistory: true,
   autoWorkspace: true,
   smartTab: true,
-  gridLines: true,
+  gridLines: false,
   autocomplete: true,
   editorTheme: "cobol",
   layout: "side-right",

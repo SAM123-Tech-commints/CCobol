@@ -37,8 +37,25 @@ type QItem =
 const norm = (s: string) =>
   s
     .toUpperCase()
+    .replace(/[^A-Z0-9 ]/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+
+/** Ask COBOL BOT whether a close-but-not-exact answer is acceptable
+ *  (caps, spacing, spelling and small wording differences). */
+async function aiGrade(given: string, expected: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/grade", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ given, expected }),
+    });
+    const data = (await res.json()) as { correct?: boolean };
+    return Boolean(data.correct);
+  } catch {
+    return false;
+  }
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -176,10 +193,20 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
     [feedback],
   );
 
-  const gradeIdent = () => {
+  const gradeIdent = async () => {
     if (!current || current.t !== "ident") return;
-    const ok = norm(identInput) === norm(current.data.term);
-    grade(ok ? 1 : 0, ok, ok ? `Correct - ${current.data.term}.` : `The answer is: ${current.data.term}.`);
+    const given = norm(identInput);
+    const want = norm(current.data.term);
+    let ok = given === want || (given.length >= 3 && (want.includes(given) || given.includes(want)));
+    let detail = ok ? `Correct - ${current.data.term}.` : `The answer is: ${current.data.term}.`;
+    if (!ok && given) {
+      const accepted = await aiGrade(identInput, current.data.term);
+      if (accepted) {
+        ok = true;
+        detail = `Accepted by COBOL BOT - the answer is ${current.data.term}.`;
+      }
+    }
+    grade(ok ? 1 : 0, ok, detail);
   };
 
   const gradeEnum = () => {

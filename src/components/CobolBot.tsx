@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { BotIcon, MinusIcon, QuoteIcon, XIcon } from "@/components/icons";
+import { BotIcon, MinusIcon, QuoteIcon } from "@/components/icons";
 import type { ExplainResult } from "@/lib/cobol/explain";
 
 type Msg =
@@ -204,11 +204,11 @@ function BotBubble({ msg }: { msg: Msg }) {
   );
 }
 
-/** Floating COBOL BOT for lesson pages: bottom-left launcher, minimizable/exitable,
- *  and a highlight-to-ask capture so the student can select text and quiz the bot. */
+/** Floating COBOL BOT for lesson pages: bottom-left launcher that minimises to a
+ *  pill (never disappears), plus highlight-to-ask so the student can select text
+ *  and quiz the bot about it. */
 export default function CobolBot({ context, title, quickPrompts }: { context: string; title?: string; quickPrompts?: string[] }) {
   const [open, setOpen] = useState(false);
-  const [hidden, setHidden] = useState(false);
   const [seed, setSeed] = useState<{ id: number; text: string } | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -221,7 +221,7 @@ export default function CobolBot({ context, title, quickPrompts }: { context: st
       const text = s?.toString().replace(/\s+/g, " ").trim() ?? "";
       const anchor = s?.anchorNode as Node | null;
       const insideBot = anchor?.parentElement?.closest(".cobolbot-panel, .cobolbot-launcher") ?? null;
-      if (hidden || insideBot || text.length < 4 || text.length > 600 || !s || s.rangeCount === 0) {
+      if (insideBot || text.length < 3 || text.length > 800 || !s || s.rangeCount === 0) {
         selRef.current = null;
         setSel(null);
         return;
@@ -233,7 +233,7 @@ export default function CobolBot({ context, title, quickPrompts }: { context: st
     };
     document.addEventListener("mouseup", onUp);
     return () => document.removeEventListener("mouseup", onUp);
-  }, [hidden]);
+  }, []);
 
   const askSelection = () => {
     const current = selRef.current;
@@ -241,13 +241,10 @@ export default function CobolBot({ context, title, quickPrompts }: { context: st
     seedId.current += 1;
     setSeed({ id: seedId.current, text: `Explain this highlighted part of the lesson:\n\n"${current.text}"` });
     setOpen(true);
-    setHidden(false);
     selRef.current = null;
     setSel(null);
     window.getSelection()?.removeAllRanges();
   };
-
-  if (hidden) return null;
 
   return (
     <>
@@ -272,9 +269,6 @@ export default function CobolBot({ context, title, quickPrompts }: { context: st
               </button>
               <button type="button" title="Minimize" onClick={() => setOpen(false)}>
                 <MinusIcon width={15} height={15} />
-              </button>
-              <button type="button" title="Exit COBOL BOT" onClick={() => { setOpen(false); setHidden(true); }}>
-                <XIcon width={15} height={15} />
               </button>
             </div>
           </div>

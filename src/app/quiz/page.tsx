@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import QuizBrowser from "@/components/QuizBrowser";
+import CobolBot from "@/components/CobolBot";
 import { quizzes } from "@/content/quizzes";
 
 export const metadata = {
@@ -16,8 +17,13 @@ export default function QuizPage() {
       <main className="page quiz-page">
         <QuizBrowser slugs={slugs} initial={schoolFirst[0] ?? "hello-world"} />
       </main>
+      <CobolBot
+        context="COBOL quizzes and flashcards: definitions of COBOL terminology, divisions, PICTURE clauses, conditions (IF/EVALUATE), PERFORM loops, files, tables and object-oriented COBOL. Help the student study and explain anything they are stuck on."
+        title="COBOL Quiz Helper"
+        quickPrompts={["Quiz me on COBOL terms", "Explain a term I'm stuck on", "Difference between PIC 9 and PIC X?", "Tips to remember the divisions"]}
+      />
       <footer className="site-footer">
-        <span>© 2025 OpenCOBOL Studio · Learn the language that runs the world.</span>
+        <span>Ac 2025 OpenCOBOL Studio A� Learn the language that runs the world.</span>
       </footer>
     </div>
   );
