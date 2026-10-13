@@ -101,9 +101,7 @@ export interface WorkbenchSettings {
   gridLines: boolean;
   /** Word suggestions while typing (COBOL keywords, variables, paragraphs). */
   autocomplete: boolean;
-  /** Editor colour theme id. */
-  editorTheme: string;
-  /** Editor/terminal arrangement. */
+  /** Terminal placement: side-by-side (right) or stacked (below). */
   layout: "side-right" | "side-left" | "stacked-below" | "stacked-above" | "editor-only" | "terminal-only";
   /** Terminal width on large screens. */
   termWidth: "narrow" | "medium" | "wide";
@@ -119,7 +117,6 @@ const DEFAULT_SETTINGS: WorkbenchSettings = {
   smartTab: true,
   gridLines: false,
   autocomplete: true,
-  editorTheme: "cobol",
   layout: "side-right",
   termWidth: "medium",
 };
@@ -132,24 +129,6 @@ const LAYOUTS: { id: WorkbenchSettings["layout"]; label: string }[] = [
   { id: "stacked-above", label: "Terminal above" },
   { id: "editor-only", label: "Editor only (no terminal)" },
   { id: "terminal-only", label: "Terminal only (no editor)" },
-];
-
-/** Editor themes shown in Settings. */
-const EDITOR_THEMES: { id: string; label: string }[] = [
-  { id: "cobol", label: "COBOL Studio (default)" },
-  { id: "vscode-dark", label: "Dark+ (Visual Studio)" },
-  { id: "high-contrast-dark", label: "High Contrast Dark" },
-  { id: "monokai", label: "Monokai" },
-  { id: "dracula", label: "Dracula" },
-  { id: "night-owl", label: "Night Owl" },
-  { id: "light", label: "Light (Visual Studio)" },
-  { id: "one-light", label: "One Light" },
-  { id: "github-light", label: "GitHub Light" },
-  { id: "solarized-light", label: "Solarized Light" },
-  { id: "catppuccin-latte", label: "Catppuccin Latte" },
-  { id: "min-light", label: "Min Light" },
-  { id: "vitesse-light", label: "Vitesse Light" },
-  { id: "high-contrast-light", label: "High Contrast Light" },
 ];
 
 const SETTINGS_KEY = "ocb-settings";
@@ -254,6 +233,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [searchOpen, setSearchOpen] = useState(false);
   const [findText, setFindText] = useState("");
   const [replText, setReplText] = useState("");
+  const [panelTab, setPanelTab] = useState<"terminal" | "output">("terminal");
+  const [lastOutput, setLastOutput] = useState("");
   const [sug, setSug] = useState<{ items: string[]; index: number; left: number; top: number; from: number } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -434,6 +415,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           const starved = (data.warnings ?? []).some((w) => w.includes(STARVED_MARKER));
           const willPause = starved && (data.errors ?? []).length === 0 && roundsRef.current < MAX_INTERACTIVE_ROUNDS;
           const fullOut = data.output ?? "";
+          setLastOutput(fullOut);
           // Show the program only up to the point where it asked for input -
           // exactly like a real interactive console that halts at ACCEPT.
           const visible = willPause && typeof data.inputStarvedAt === "number" ? fullOut.slice(0, data.inputStarvedAt) : fullOut;
@@ -1182,7 +1164,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.cobol,.cpy,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
-      <div className={`doc-dark edtheme-${settings.editorTheme} wb-themed overflow-hidden rounded-xl border border-slate-700 shadow-2xl`}>
+      <div className="doc-dark wb-themed overflow-hidden rounded-xl border border-slate-700 shadow-2xl">
         {/* top toolbar */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 wb-chrome px-3 py-2">
           <span className="mr-1 hidden items-center gap-1.5 sm:flex">
@@ -1232,6 +1214,15 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               <SaveIcon width={12} height={12} />
               {saving ? "Saving…" : "Save"}
             </span>
+          </button>
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            title="Create a share link and copy it to the clipboard"
+            className="rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+          >
+            Share
           </button>
           <div className="relative">
             <button
@@ -1555,7 +1546,20 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           {/* terminal */}
           <div className={termClass}>
             <div className="flex items-center gap-2 border-b border-slate-800 wb-chrome px-3 py-1.5">
-              <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">Terminal</p>
+              <div className="flex gap-1">
+                {(["terminal", "output"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setPanelTab(t)}
+                    className={`rounded px-2 py-0.5 font-mono text-[11px] font-bold uppercase tracking-wider transition ${
+                      panelTab === t ? "bg-slate-700/70 text-white" : "text-slate-500 hover:text-slate-200"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
               {writtenFiles.length ? <span className="font-mono text-[10px] text-slate-500">{writtenFiles.length} file(s) written</span> : null}
               {running ? (
@@ -1577,6 +1581,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                 <TrashIcon width={13} height={13} />
               </button>
             </div>
+            {panelTab === "terminal" ? (
             <div
               className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3 outline-none"
               tabIndex={0}
@@ -1720,6 +1725,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                 <div ref={termEndRef} />
               </div>
             </div>
+            ) : (
+              <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3">
+                <pre className="whitespace-pre-wrap font-mono text-slate-200" style={{ fontSize: settings.termFont }}>
+                  {lastOutput || "(no output yet - press Run to see the full program output)"}
+                </pre>
+              </div>
+            )}
           </div>
           </div>
 
@@ -1751,7 +1763,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       {showSettings ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowSettings(false)}>
           <div
-            className="w-full max-w-md rounded-xl border border-slate-600 wb-chrome p-4 text-sm shadow-2xl"
+            className="w-full max-w-md rounded-xl border border-slate-600 wb-themed wb-chrome p-4 text-sm shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -1856,20 +1868,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                 />
               </label>
               <label className="flex items-center justify-between gap-3">
-                <span>Editor theme</span>
-                <select
-                  value={settings.editorTheme}
-                  onChange={(e) => setSettings((s) => ({ ...s, editorTheme: e.target.value }))}
-                  className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-400"
-                >
-                  {EDITOR_THEMES.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex items-center justify-between gap-3">
                 <span>Layout</span>
                 <select
                   value={settings.layout}
@@ -1949,7 +1947,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         </p>
         <p className="mt-2">
           <strong>History</strong> keeps a snapshot of every run in this browser - click one to restore its files.
-          <strong> Settings</strong> controls fonts, indent, wrap, autocomplete, editor theme, layout, smart tab and grid
+          <strong> Settings</strong> controls fonts, indent, wrap, autocomplete, layout, smart tab and grid
           lines.
         </p>
         <p className="mt-2 font-semibold text-slate-800">Keyboard shortcuts (editor)</p>
