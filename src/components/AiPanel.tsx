@@ -8,7 +8,7 @@ import { BotChat, BotAvatar } from "@/components/CobolBot";
 export default function AiPanel({ code, title }: { code: string; title?: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-t border-slate-700 bg-[#0b1625]">
+    <div className="border-t border-slate-700 wb-chrome">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

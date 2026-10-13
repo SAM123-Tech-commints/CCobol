@@ -157,9 +157,21 @@ button {
   --ed-lvl: #d5a6ff;
   --ed-cm: #687b94;
   --ed-fg: #e2e8f0;
-  --ed-bg: transparent;
+  --ed-bg: #091524;
   --ed-gutter: #0a1422;
   --ed-gutter-fg: #64748b;
+  --wb-bg: #091524;
+  --wb-chrome: #0b1625;
+  --wb-side: #0a1422;
+  --wb-term: #050c17;
+  --wb-text: #e2e8f0;
+  --wb-dim: #94a3b8;
+  --wb-border: rgba(145, 167, 194, 0.14);
+  --wb-ok: #6ee7b7;
+  --wb-err: #fb7185;
+  --wb-prompt: #8db8ff;
+  --wb-warn: #fbbf24;
+  --wb-input: #1e293b;
 }
 .edtheme-vscode-dark {
   --ed-kw: #569cd6;
@@ -171,6 +183,18 @@ button {
   --ed-bg: #1e1e1e;
   --ed-gutter: #1e1e1e;
   --ed-gutter-fg: #858585;
+  --wb-bg: #1e1e1e;
+  --wb-chrome: #252526;
+  --wb-side: #252526;
+  --wb-term: #1e1e1e;
+  --wb-text: #d4d4d4;
+  --wb-dim: #9d9d9d;
+  --wb-border: #3c3c3c;
+  --wb-ok: #4ec9b0;
+  --wb-err: #f48771;
+  --wb-prompt: #569cd6;
+  --wb-warn: #dcdcaa;
+  --wb-input: #3c3c3c;
 }
 .edtheme-monokai {
   --ed-kw: #f92672;
@@ -182,6 +206,18 @@ button {
   --ed-bg: #272822;
   --ed-gutter: #272822;
   --ed-gutter-fg: #90908a;
+  --wb-bg: #272822;
+  --wb-chrome: #1e1f1c;
+  --wb-side: #22231f;
+  --wb-term: #1e1f1c;
+  --wb-text: #f8f8f2;
+  --wb-dim: #90908a;
+  --wb-border: #3b3c35;
+  --wb-ok: #a6e22e;
+  --wb-err: #f92672;
+  --wb-prompt: #66d9ef;
+  --wb-warn: #e6db74;
+  --wb-input: #1e1f1c;
 }
 .edtheme-dracula {
   --ed-kw: #ff79c6;
@@ -193,17 +229,297 @@ button {
   --ed-bg: #282a36;
   --ed-gutter: #282a36;
   --ed-gutter-fg: #6272a4;
+  --wb-bg: #282a36;
+  --wb-chrome: #21222c;
+  --wb-side: #21222c;
+  --wb-term: #1e1f29;
+  --wb-text: #f8f8f2;
+  --wb-dim: #6272a4;
+  --wb-border: #44475a;
+  --wb-ok: #50fa7b;
+  --wb-err: #ff5555;
+  --wb-prompt: #8be9fd;
+  --wb-warn: #f1fa8c;
+  --wb-input: #21222c;
+}
+.edtheme-night-owl {
+  --ed-kw: #c792ea;
+  --ed-str: #ecc48d;
+  --ed-num: #f78c6c;
+  --ed-lvl: #7fdbca;
+  --ed-cm: #637777;
+  --ed-fg: #d6deeb;
+  --ed-bg: #011627;
+  --ed-gutter: #011627;
+  --ed-gutter-fg: #4b6479;
+  --wb-bg: #011627;
+  --wb-chrome: #0b2942;
+  --wb-side: #0b2942;
+  --wb-term: #01111d;
+  --wb-text: #d6deeb;
+  --wb-dim: #5f7e97;
+  --wb-border: #1d3b53;
+  --wb-ok: #addb67;
+  --wb-err: #ef5350;
+  --wb-prompt: #82aaff;
+  --wb-warn: #ffcb8b;
+  --wb-input: #0b2942;
+}
+.edtheme-high-contrast-dark {
+  --ed-kw: #569cd6;
+  --ed-str: #ce9178;
+  --ed-num: #b5cea8;
+  --ed-lvl: #4ec9b0;
+  --ed-cm: #7ca668;
+  --ed-fg: #ffffff;
+  --ed-bg: #000000;
+  --ed-gutter: #000000;
+  --ed-gutter-fg: #ffffff;
+  --wb-bg: #000000;
+  --wb-chrome: #0a0a0a;
+  --wb-side: #0a0a0a;
+  --wb-term: #000000;
+  --wb-text: #ffffff;
+  --wb-dim: #cccccc;
+  --wb-border: #555555;
+  --wb-ok: #3ff23f;
+  --wb-err: #ff5555;
+  --wb-prompt: #6cb6ff;
+  --wb-warn: #ffff00;
+  --wb-input: #111111;
 }
 .edtheme-light {
-  --ed-kw: #0550ae;
+  --ed-kw: #0000ff;
+  --ed-str: #a31515;
+  --ed-num: #098658;
+  --ed-lvl: #267f99;
+  --ed-cm: #008000;
+  --ed-fg: #1f2328;
+  --ed-bg: #ffffff;
+  --ed-gutter: #f6f8fa;
+  --ed-gutter-fg: #237893;
+  --wb-bg: #ffffff;
+  --wb-chrome: #f3f3f3;
+  --wb-side: #f6f8fa;
+  --wb-term: #ffffff;
+  --wb-text: #1f2328;
+  --wb-dim: #57606a;
+  --wb-border: #d0d7de;
+  --wb-ok: #067d17;
+  --wb-err: #cd3131;
+  --wb-prompt: #0451a5;
+  --wb-warn: #bf8803;
+  --wb-input: #ffffff;
+}
+.edtheme-one-light {
+  --ed-kw: #a626a4;
+  --ed-str: #50a14f;
+  --ed-num: #986801;
+  --ed-lvl: #c18401;
+  --ed-cm: #a0a1a7;
+  --ed-fg: #383a42;
+  --ed-bg: #fafafa;
+  --ed-gutter: #fafafa;
+  --ed-gutter-fg: #9d9d9f;
+  --wb-bg: #fafafa;
+  --wb-chrome: #eaeaeb;
+  --wb-side: #f0f0f1;
+  --wb-term: #fafafa;
+  --wb-text: #383a42;
+  --wb-dim: #696c77;
+  --wb-border: #d4d4d5;
+  --wb-ok: #50a14f;
+  --wb-err: #e45649;
+  --wb-prompt: #4078f2;
+  --wb-warn: #c18401;
+  --wb-input: #ffffff;
+}
+.edtheme-github-light {
+  --ed-kw: #cf222e;
   --ed-str: #0a3069;
   --ed-num: #0550ae;
   --ed-lvl: #953800;
   --ed-cm: #6e7781;
   --ed-fg: #1f2328;
   --ed-bg: #ffffff;
-  --ed-gutter: #f6f8fa;
+  --ed-gutter: #ffffff;
   --ed-gutter-fg: #8c959f;
+  --wb-bg: #ffffff;
+  --wb-chrome: #f6f8fa;
+  --wb-side: #f6f8fa;
+  --wb-term: #ffffff;
+  --wb-text: #1f2328;
+  --wb-dim: #57606a;
+  --wb-border: #d0d7de;
+  --wb-ok: #1a7f37;
+  --wb-err: #cf222e;
+  --wb-prompt: #0550ae;
+  --wb-warn: #9a6700;
+  --wb-input: #ffffff;
+}
+.edtheme-solarized-light {
+  --ed-kw: #859900;
+  --ed-str: #2aa198;
+  --ed-num: #d33682;
+  --ed-lvl: #268bd2;
+  --ed-cm: #93a1a1;
+  --ed-fg: #586e75;
+  --ed-bg: #fdf6e3;
+  --ed-gutter: #fdf6e3;
+  --ed-gutter-fg: #93a1a1;
+  --wb-bg: #fdf6e3;
+  --wb-chrome: #eee8d5;
+  --wb-side: #eee8d5;
+  --wb-term: #fdf6e3;
+  --wb-text: #586e75;
+  --wb-dim: #93a1a1;
+  --wb-border: #d6cfb6;
+  --wb-ok: #859900;
+  --wb-err: #dc322f;
+  --wb-prompt: #268bd2;
+  --wb-warn: #b58900;
+  --wb-input: #eee8d5;
+}
+.edtheme-catppuccin-latte {
+  --ed-kw: #8839ef;
+  --ed-str: #40a02b;
+  --ed-num: #fe640b;
+  --ed-lvl: #1e66f5;
+  --ed-cm: #9ca0b0;
+  --ed-fg: #4c4f69;
+  --ed-bg: #eff1f5;
+  --ed-gutter: #eff1f5;
+  --ed-gutter-fg: #9ca0b0;
+  --wb-bg: #eff1f5;
+  --wb-chrome: #e6e9ef;
+  --wb-side: #e6e9ef;
+  --wb-term: #eff1f5;
+  --wb-text: #4c4f69;
+  --wb-dim: #8c8fa1;
+  --wb-border: #ccd0da;
+  --wb-ok: #40a02b;
+  --wb-err: #d20f39;
+  --wb-prompt: #1e66f5;
+  --wb-warn: #df8e1d;
+  --wb-input: #ffffff;
+}
+.edtheme-min-light {
+  --ed-kw: #1976d2;
+  --ed-str: #22863a;
+  --ed-num: #a04100;
+  --ed-lvl: #6f42c1;
+  --ed-cm: #a0a0a0;
+  --ed-fg: #24292e;
+  --ed-bg: #ffffff;
+  --ed-gutter: #ffffff;
+  --ed-gutter-fg: #b0b0b0;
+  --wb-bg: #ffffff;
+  --wb-chrome: #f7f7f7;
+  --wb-side: #f7f7f7;
+  --wb-term: #ffffff;
+  --wb-text: #24292e;
+  --wb-dim: #8a8f98;
+  --wb-border: #e1e4e8;
+  --wb-ok: #22863a;
+  --wb-err: #d73a49;
+  --wb-prompt: #1976d2;
+  --wb-warn: #b08800;
+  --wb-input: #ffffff;
+}
+.edtheme-vitesse-light {
+  --ed-kw: #b07d48;
+  --ed-str: #2e8b57;
+  --ed-num: #2c9678;
+  --ed-lvl: #a65d3a;
+  --ed-cm: #a0a0a0;
+  --ed-fg: #393a34;
+  --ed-bg: #ffffff;
+  --ed-gutter: #ffffff;
+  --ed-gutter-fg: #b3b3b3;
+  --wb-bg: #ffffff;
+  --wb-chrome: #f4f4f4;
+  --wb-side: #f4f4f4;
+  --wb-term: #ffffff;
+  --wb-text: #393a34;
+  --wb-dim: #8f8f8f;
+  --wb-border: #e0e0e0;
+  --wb-ok: #1e8e3e;
+  --wb-err: #ab5959;
+  --wb-prompt: #2e6cbf;
+  --wb-warn: #b07d48;
+  --wb-input: #ffffff;
+}
+.edtheme-high-contrast-light {
+  --ed-kw: #0000ff;
+  --ed-str: #a31515;
+  --ed-num: #098658;
+  --ed-lvl: #267f99;
+  --ed-cm: #008000;
+  --ed-fg: #000000;
+  --ed-bg: #ffffff;
+  --ed-gutter: #ffffff;
+  --ed-gutter-fg: #000000;
+  --wb-bg: #ffffff;
+  --wb-chrome: #ffffff;
+  --wb-side: #ffffff;
+  --wb-term: #ffffff;
+  --wb-text: #000000;
+  --wb-dim: #333333;
+  --wb-border: #000000;
+  --wb-ok: #006400;
+  --wb-err: #cc0000;
+  --wb-prompt: #0000cc;
+  --wb-warn: #7a5c00;
+  --wb-input: #ffffff;
+}
+
+/* Whole-IDE theme application (chrome, explorer, tabs, terminal, panels) */
+.wb-themed {
+  background: var(--wb-bg);
+  color: var(--wb-text);
+}
+.wb-bg {
+  background: var(--wb-bg);
+}
+.wb-chrome {
+  background: var(--wb-chrome);
+}
+.wb-side {
+  background: var(--wb-side);
+}
+.wb-term {
+  background: var(--wb-term);
+}
+.wb-themed .text-slate-100,
+.wb-themed .text-slate-200,
+.wb-themed .text-slate-300 {
+  color: var(--wb-text) !important;
+}
+.wb-themed .text-slate-400 {
+  color: var(--wb-dim) !important;
+}
+.wb-themed .text-violet-200,
+.wb-themed .text-violet-300,
+.wb-themed .text-indigo-400 {
+  color: var(--wb-prompt) !important;
+}
+.wb-themed .text-emerald-300,
+.wb-themed .text-emerald-400 {
+  color: var(--wb-ok) !important;
+}
+.wb-themed .text-rose-300,
+.wb-themed .text-rose-400 {
+  color: var(--wb-err) !important;
+}
+.wb-themed .text-amber-400 {
+  color: var(--wb-warn) !important;
+}
+.wb-themed .bg-slate-800 {
+  background: var(--wb-input) !important;
+}
+.wb-themed .border-slate-700,
+.wb-themed .border-slate-800 {
+  border-color: var(--wb-border) !important;
 }
 
 /* autocomplete popup */
@@ -2732,7 +3048,7 @@ html[data-theme="light"] .text-sky-800 {
 }
 .cobolbot-docked .cobolbot-body {
   max-height: 300px;
-  background: #091524;
+  background: var(--wb-bg, #091524);
 }
 .cobolbot-hello {
   display: flex;

@@ -15,6 +15,7 @@ import {
   PlusIcon,
   RotateIcon,
   SaveIcon,
+  SearchIcon,
   TrashIcon,
   UploadIcon,
   XIcon,
@@ -136,10 +137,19 @@ const LAYOUTS: { id: WorkbenchSettings["layout"]; label: string }[] = [
 /** Editor themes shown in Settings. */
 const EDITOR_THEMES: { id: string; label: string }[] = [
   { id: "cobol", label: "COBOL Studio (default)" },
-  { id: "vscode-dark", label: "VS Code Dark+" },
+  { id: "vscode-dark", label: "Dark+ (Visual Studio)" },
+  { id: "high-contrast-dark", label: "High Contrast Dark" },
   { id: "monokai", label: "Monokai" },
   { id: "dracula", label: "Dracula" },
-  { id: "light", label: "Light" },
+  { id: "night-owl", label: "Night Owl" },
+  { id: "light", label: "Light (Visual Studio)" },
+  { id: "one-light", label: "One Light" },
+  { id: "github-light", label: "GitHub Light" },
+  { id: "solarized-light", label: "Solarized Light" },
+  { id: "catppuccin-latte", label: "Catppuccin Latte" },
+  { id: "min-light", label: "Min Light" },
+  { id: "vitesse-light", label: "Vitesse Light" },
+  { id: "high-contrast-light", label: "High Contrast Light" },
 ];
 
 const SETTINGS_KEY = "ocb-settings";
@@ -241,6 +251,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replText, setReplText] = useState("");
   const [sug, setSug] = useState<{ items: string[]; index: number; left: number; top: number; from: number } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -879,6 +892,28 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     print([{ kind: "sys", text: `downloaded ${docs.length} file(s) as ${safe}.zip` }]);
   };
 
+  /** Search & replace across every file in the project. */
+  const searchResults = useMemo(() => {
+    const q = findText.trim().toLowerCase();
+    if (!q) return [] as { idx: number; name: string; line: number; text: string }[];
+    const out: { idx: number; name: string; line: number; text: string }[] = [];
+    docs.forEach((d, idx) => {
+      d.content.split("\n").forEach((ln, i) => {
+        if (ln.toLowerCase().includes(q)) out.push({ idx, name: d.name, line: i + 1, text: ln.trim().slice(0, 60) });
+      });
+    });
+    return out.slice(0, 100);
+  }, [docs, findText]);
+
+  const replaceAll = () => {
+    if (!findText) return;
+    const re = new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    setDocs((prev) => prev.map((d) => ({ ...d, content: d.content.replace(re, replText) })));
+    compiledRef.current = null;
+    setExeName(null);
+    print([{ kind: "sys", text: `replaced all "${findText}" with "${replText}"` }]);
+  };
+
   const syncScroll = () => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -1135,7 +1170,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   }`;
   const termWidthClass =
     settings.termWidth === "narrow" ? "lg:w-[320px]" : settings.termWidth === "wide" ? "lg:w-[460px]" : "lg:w-[380px]";
-  const termClass = `flex min-h-[300px] shrink-0 flex-col bg-black ${
+  const termClass = `flex min-h-[300px] shrink-0 flex-col wb-term ${
     isSideLayout
       ? `${termWidthClass} border-t border-slate-800 lg:border-t-0 ${settings.layout === "side-left" ? "lg:border-r" : "lg:border-l"}`
       : settings.layout === "stacked-above"
@@ -1147,9 +1182,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.cobol,.cpy,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
-      <div className={`doc-dark edtheme-${settings.editorTheme} overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-2xl`}>
+      <div className={`doc-dark edtheme-${settings.editorTheme} wb-themed overflow-hidden rounded-xl border border-slate-700 shadow-2xl`}>
         {/* top toolbar */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 bg-[#0b1625] px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 wb-chrome px-3 py-2">
           <span className="mr-1 hidden items-center gap-1.5 sm:flex">
             <span className="h-3 w-3 rounded-full bg-rose-500/80" />
             <span className="h-3 w-3 rounded-full bg-amber-400/80" />
@@ -1214,7 +1249,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               History{history.length ? ` (${history.length})` : ""}
             </button>
             {showHistory ? (
-              <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-80 overflow-auto rounded-lg border border-slate-600 bg-[#0b1625] p-2 shadow-2xl">
+              <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-80 overflow-auto rounded-lg border border-slate-600 wb-chrome p-2 shadow-2xl">
                 <div className="flex items-center justify-between px-1 pb-1">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Local history</p>
                   {history.length ? (
@@ -1274,10 +1309,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         <div className={paneClass}>
           <div className={showEditorPane ? "flex min-w-0 flex-1 flex-col sm:flex-row" : "hidden"}>
             {/* explorer */}
-            <div className="shrink-0 border-b border-slate-800 bg-[#0a1422] sm:w-52 sm:border-b-0 sm:border-r">
+            <div className="shrink-0 border-b border-slate-800 wb-side sm:w-52 sm:border-b-0 sm:border-r">
               <div className="flex items-center justify-between px-3 pt-3 pb-1">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Explorer</p>
                 <div className="flex gap-1">
+                  <button type="button" onClick={() => setSearchOpen((v) => !v)} title="Search & replace across files" className={`flex items-center rounded p-1 hover:bg-slate-700 hover:text-white ${searchOpen ? "text-white" : "text-slate-400"}`}>
+                    <SearchIcon width={14} height={14} />
+                  </button>
                   <button type="button" onClick={() => uploadRef.current?.click()} title="Add files from your computer (.cbl, .dat)" className="flex items-center rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
                     <UploadIcon width={14} height={14} />
                   </button>
@@ -1292,6 +1330,52 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   </button>
                 </div>
               </div>
+              {searchOpen ? (
+                <div className="border-b border-slate-800 px-2 pb-2">
+                  <input
+                    value={findText}
+                    onChange={(e) => setFindText(e.target.value)}
+                    placeholder="Search"
+                    className="mb-1 w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-indigo-400"
+                  />
+                  <input
+                    value={replText}
+                    onChange={(e) => setReplText(e.target.value)}
+                    placeholder="Replace"
+                    className="w-full rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none placeholder:text-slate-500 focus:border-indigo-400"
+                  />
+                  <div className="mt-1.5 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-500">{searchResults.length} match(es)</span>
+                    <button
+                      type="button"
+                      onClick={replaceAll}
+                      disabled={!findText}
+                      className="rounded bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                    >
+                      Replace all
+                    </button>
+                  </div>
+                  {searchResults.length ? (
+                    <ul className="mt-1.5 max-h-40 overflow-auto">
+                      {searchResults.map((r, i) => (
+                        <li key={i}>
+                          <button
+                            type="button"
+                            onClick={() => setActive(r.idx)}
+                            className="block w-full truncate rounded px-1 py-0.5 text-left font-mono text-[10px] text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                            title={`${r.name}:${r.line}`}
+                          >
+                            <span className="text-slate-500">
+                              {r.name}:{r.line}
+                            </span>{" "}
+                            {r.text}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="flex gap-1 overflow-x-auto px-2 pb-2 sm:flex-col sm:overflow-visible">
                 {docs.map((doc, idx) =>
                   renaming === doc.name ? (
@@ -1377,14 +1461,14 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
             {/* editor */}
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800 bg-[#0a1422] px-2 pt-1.5">
+              <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800 wb-side px-2 pt-1.5">
                 {docs.map((doc, idx) => (
                   <button
                     key={`${doc.kind}-${doc.name}`}
                     type="button"
                     onClick={() => setActive(idx)}
                     className={`flex shrink-0 items-center gap-1.5 rounded-t-md px-3 py-1.5 font-mono text-xs transition ${
-                      idx === safeActive ? "bg-[#091524] font-semibold text-white" : "text-slate-500 hover:bg-slate-800/50 hover:text-slate-300"
+                      idx === safeActive ? "wb-bg font-semibold text-white" : "text-slate-500 hover:bg-slate-800/50 hover:text-slate-300"
                     }`}
                   >
                     {doc.name}
@@ -1470,7 +1554,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
           {/* terminal */}
           <div className={termClass}>
-            <div className="flex items-center gap-2 border-b border-slate-800 bg-[#0b1625] px-3 py-1.5">
+            <div className="flex items-center gap-2 border-b border-slate-800 wb-chrome px-3 py-1.5">
               <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">Terminal</p>
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
               {writtenFiles.length ? <span className="font-mono text-[10px] text-slate-500">{writtenFiles.length} file(s) written</span> : null}
@@ -1642,7 +1726,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         <AiPanel code={combinedCode} title={title} />
 
         {/* status bar */}
-        <div className="flex items-center gap-3 border-t border-slate-700 bg-[#0b1625] px-3 py-1.5 font-mono text-[11px] text-slate-400">
+        <div className="flex items-center gap-3 border-t border-slate-700 wb-chrome px-3 py-1.5 font-mono text-[11px] text-slate-400">
           <span className={running ? "text-amber-400" : "text-emerald-400"}>● {running ? "Running" : "Ready"}</span>
           <span className="truncate">{activeDoc.name}</span>
           <span className="ml-auto shrink-0">
@@ -1667,7 +1751,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       {showSettings ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowSettings(false)}>
           <div
-            className="w-full max-w-md rounded-xl border border-slate-600 bg-[#0b1625] p-4 text-sm shadow-2xl"
+            className="w-full max-w-md rounded-xl border border-slate-600 wb-chrome p-4 text-sm shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
