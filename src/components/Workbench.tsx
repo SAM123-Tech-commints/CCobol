@@ -13,12 +13,11 @@ import {
   PlayIcon,
   PlusIcon,
   SaveIcon,
-  SparkleIcon,
   TrashIcon,
   UploadIcon,
   XIcon,
 } from "@/components/icons";
-import CodeExplainer from "@/components/CodeExplainer";
+import AiPanel from "@/components/AiPanel";
 
 export interface WorkbenchExample {
   id: string;
@@ -201,7 +200,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showExplain, setShowExplain] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -925,19 +923,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             <GearIcon width={12} height={12} />
             Settings
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowExplain(true);
-              setShowHistory(false);
-              setShowSettings(false);
-            }}
-            title="Explain this program line by line (AI when configured)"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/40 px-3 py-1.5 text-xs font-semibold text-violet-200 transition hover:border-violet-400 hover:text-white"
-          >
-            <SparkleIcon width={12} height={12} />
-            Explain
-          </button>
         </div>
 
         {/* main 2-pane area: explorer+editor | terminal */}
@@ -1264,7 +1249,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               </div>
             </div>
           </div>
-        </div>
+          </div>
+
+        <AiPanel code={combinedCode} title={title} />
 
         {/* status bar */}
         <div className="flex items-center gap-3 border-t border-slate-700 bg-[#0b1625] px-3 py-1.5 font-mono text-[11px] text-slate-400">
@@ -1381,30 +1368,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             >
               Clear saved workspace, history & settings
             </button>
-          </div>
-        </div>
-      ) : null}
-
-      {showExplain ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:p-8"
-          onClick={() => setShowExplain(false)}
-        >
-          <div
-            className="w-full max-w-3xl rounded-xl border border-slate-600 bg-[#0b1625] p-4 text-sm shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <p className="font-bold text-white">Explain this program - line by line</p>
-              <button
-                type="button"
-                onClick={() => setShowExplain(false)}
-                className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white"
-              >
-                <XIcon width={14} height={14} />
-              </button>
-            </div>
-            <CodeExplainer key={combinedCode} code={combinedCode} title={title} defaultOpen />
           </div>
         </div>
       ) : null}
