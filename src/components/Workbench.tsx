@@ -5,6 +5,7 @@ import { highlightCobol, cobolKeywords } from "@/lib/cobol/highlight";
 import { parseSource } from "@/lib/cobol/units";
 import {
   ClockIcon,
+  DownloadAllIcon,
   DownloadIcon,
   FileCodeIcon,
   FileIcon,
@@ -12,6 +13,7 @@ import {
   PencilIcon,
   PlayIcon,
   PlusIcon,
+  RotateIcon,
   SaveIcon,
   TrashIcon,
   UploadIcon,
@@ -100,6 +102,10 @@ export interface WorkbenchSettings {
   autocomplete: boolean;
   /** Editor colour theme id. */
   editorTheme: string;
+  /** Terminal placement: side-by-side (right) or stacked (below). */
+  layout: "side" | "stacked";
+  /** Terminal width on large screens. */
+  termWidth: "narrow" | "medium" | "wide";
 }
 
 const DEFAULT_SETTINGS: WorkbenchSettings = {
@@ -113,6 +119,8 @@ const DEFAULT_SETTINGS: WorkbenchSettings = {
   gridLines: true,
   autocomplete: true,
   editorTheme: "cobol",
+  layout: "side",
+  termWidth: "medium",
 };
 
 /** Editor themes shown in Settings. */
@@ -187,7 +195,7 @@ function renderTranscript(visible: string, points: number[], echoes: string[], p
 }
 
 function kindOf(name: string): "cobol" | "data" {
-  return /\.(cbl|cob)$/i.test(name) ? "cobol" : "data";
+  return /\.(cbl|cob|cobol)$/i.test(name) ? "cobol" : "data";
 }
 
 function uniqueName(docs: DocFile[], base: string): string {
@@ -241,6 +249,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const cmdHistoryRef = useRef<string[]>([]);
   const cmdIdxRef = useRef(0);
   const hydratedRef = useRef(false);
+  const histRef = useRef<Record<string, { past: string[]; future: string[] }>>({});
+  const lastPushRef = useRef(0);
   const MAX_INTERACTIVE_ROUNDS = 12;
 
   useEffect(() => {
@@ -704,6 +714,18 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     resetTerminal("Cleared saved workspace, history and settings for this browser.");
   };
 
+  /** Reset the workspace to a fresh Hello World (keeps your settings & history). */
+  const resetWorkspace = () => {
+    setDocs([{ name: "HelloWorld.cbl", content: DEFAULT_CODE, kind: "cobol" }]);
+    setActive(0);
+    setTitle("Hello, World!");
+    prefillRef.current = "";
+    histRef.current = {};
+    compiledRef.current = null;
+    setExeName(null);
+    resetTerminal("Workspace reset - starting from a fresh Hello World.");
+  };
+
   const save = async () => {
     setSaving(true);
     setShareUrl(null);
@@ -726,10 +748,45 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     }
   };
 
-  const updateActive = (content: string) => {
+  const updateActive = (content: string) => applyContent(content, true);
+
+  /** Record undo history (coalescing a burst of typing into one step). */
+  const pushHistory = (name: string, content: string) => {
+    const now = Date.now();
+    if (now - lastPushRef.current < 600) return;
+    const h = histRef.current[name] ?? { past: [], future: [] };
+    h.past.push(content);
+    if (h.past.length > 200) h.past.shift();
+    h.future = [];
+    histRef.current[name] = h;
+    lastPushRef.current = now;
+  };
+
+  /** Persist an edit to the active document (undo/redo restores skip history). */
+  const applyContent = (content: string, record: boolean) => {
+    if (content === activeDoc.content) return;
+    if (record) pushHistory(activeDoc.name, activeDoc.content);
     setDocs((prev) => prev.map((d, i) => (i === safeActive ? { ...d, content } : d)));
     compiledRef.current = null;
     setExeName(null);
+  };
+
+  const undo = () => {
+    const h = histRef.current[activeDoc.name];
+    if (!h || !h.past.length) return;
+    const prev = h.past.pop() as string;
+    h.future.push(activeDoc.content);
+    lastPushRef.current = 0;
+    applyContent(prev, false);
+  };
+
+  const redo = () => {
+    const h = histRef.current[activeDoc.name];
+    if (!h || !h.future.length) return;
+    const next = h.future.pop() as string;
+    h.past.push(activeDoc.content);
+    lastPushRef.current = 0;
+    applyContent(next, false);
   };
 
   const addCobolFile = () => {
@@ -792,6 +849,15 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       print([{ kind: "sys", text: `added ${additions.map((a) => a.name).join(", ")} - 'ls' to list, 'cat <file>' to view` }]);
     }
     e.target.value = "";
+  };
+
+  /** Download every file in the project as a single .zip. */
+  const downloadAll = () => {
+    if (!docs.length) return;
+    const blob = buildZip(docs.map((d) => ({ name: d.name, content: d.content })));
+    const safe = (title || "cobol-project").replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") || "cobol-project";
+    downloadBlob(blob, `${safe}.zip`);
+    print([{ kind: "sys", text: `downloaded ${docs.length} file(s) as ${safe}.zip` }]);
   };
 
   const syncScroll = () => {
@@ -865,7 +931,106 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     });
   };
 
+  /** Ctrl+/ - toggle a COBOL comment (*>) on the current line / selection. */
+  const toggleComment = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const content = activeDoc.content;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+    let lineEnd = content.indexOf("\n", end);
+    if (lineEnd === -1) lineEnd = content.length;
+    const lines = content.slice(lineStart, lineEnd).split("\n");
+    const allCommented = lines.every((l) => l.trimStart().startsWith("*>"));
+    const next = lines
+      .map((l) => {
+        if (allCommented) return l.replace(/^(\s*)\*>\s?/, "$1");
+        const indent = (l.match(/^\s*/) ?? [""])[0];
+        return `${indent}*> ${l.slice(indent.length)}`;
+      })
+      .join("\n");
+    applyContent(content.slice(0, lineStart) + next + content.slice(lineEnd), true);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = lineStart;
+        textareaRef.current.selectionEnd = lineStart + next.length;
+      }
+    });
+  };
+
+  /** Alt+Up / Alt+Down - move the current line (or selection) up or down. */
+  const moveLines = (dir: number) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const content = activeDoc.content;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+    let lineEnd = content.indexOf("\n", end);
+    const hasTrailing = lineEnd !== -1;
+    if (lineEnd === -1) lineEnd = content.length;
+    const block = content.slice(lineStart, lineEnd);
+    if (dir < 0) {
+      if (lineStart === 0) return;
+      const prevStart = content.lastIndexOf("\n", lineStart - 2) + 1;
+      const prevBlock = content.slice(prevStart, lineStart - 1);
+      applyContent(content.slice(0, prevStart) + block + "\n" + prevBlock + content.slice(lineEnd), true);
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = prevStart;
+          textareaRef.current.selectionEnd = prevStart + block.length;
+        }
+      });
+    } else {
+      if (!hasTrailing) return;
+      const nextLineEnd = content.indexOf("\n", lineEnd + 1);
+      const afterEnd = nextLineEnd === -1 ? content.length : nextLineEnd;
+      const nextBlock = content.slice(lineEnd + 1, afterEnd);
+      if (!nextBlock) return;
+      applyContent(content.slice(0, lineStart) + nextBlock + "\n" + block + content.slice(afterEnd), true);
+      const nl = lineStart + nextBlock.length + 1;
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = nl;
+          textareaRef.current.selectionEnd = nl + block.length;
+        }
+      });
+    }
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const mod = event.ctrlKey || event.metaKey;
+    if (mod && !event.altKey && event.shiftKey && event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      redo();
+      return;
+    }
+    if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      undo();
+      return;
+    }
+    if (mod && event.key.toLowerCase() === "y") {
+      event.preventDefault();
+      redo();
+      return;
+    }
+    if (mod && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      void save();
+      return;
+    }
+    if (mod && event.key === "/") {
+      event.preventDefault();
+      toggleComment();
+      return;
+    }
+    if (event.altKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
+      event.preventDefault();
+      moveLines(event.key === "ArrowUp" ? -1 : 1);
+      return;
+    }
     if (sug && sug.items.length) {
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -939,7 +1104,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
   return (
     <div>
-      <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.dat,.txt" onChange={onUpload} className="hidden" />
+      <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.cobol,.cpy,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
       <div className={`doc-dark edtheme-${settings.editorTheme} overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-2xl`}>
         {/* top toolbar */}
@@ -1065,7 +1230,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         </div>
 
         {/* main 2-pane area: explorer+editor | terminal */}
-        <div className="flex min-h-[480px] flex-col lg:flex-row">
+        <div className={`flex min-h-[480px] flex-col ${settings.layout === "side" ? "lg:flex-row" : ""}`}>
           <div className="flex min-w-0 flex-1 flex-col sm:flex-row">
             {/* explorer */}
             <div className="shrink-0 border-b border-slate-800 bg-[#0a1422] sm:w-52 sm:border-b-0 sm:border-r">
@@ -1077,6 +1242,12 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   </button>
                   <button type="button" onClick={addCobolFile} title="New COBOL file" className="flex items-center rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
                     <PlusIcon width={14} height={14} />
+                  </button>
+                  <button type="button" onClick={downloadAll} title="Download all files as a .zip" className="flex items-center rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                    <DownloadAllIcon width={14} height={14} />
+                  </button>
+                  <button type="button" onClick={resetWorkspace} title="Reset the workspace (fresh Hello World)" className="flex items-center rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                    <RotateIcon width={14} height={14} />
                   </button>
                 </div>
               </div>
@@ -1257,7 +1428,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </div>
 
           {/* terminal */}
-          <div className="flex min-h-[300px] shrink-0 flex-col border-t border-slate-800 bg-black lg:w-[380px] lg:border-t-0 lg:border-l">
+          <div className={`flex min-h-[300px] shrink-0 flex-col border-t border-slate-800 bg-black ${settings.layout === "side" ? `term-w-${settings.termWidth} lg:border-t-0 lg:border-l` : ""}`}>
             <div className="flex items-center gap-2 border-b border-slate-800 bg-[#0b1625] px-3 py-1.5">
               <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">Terminal</p>
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
@@ -1573,6 +1744,29 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   ))}
                 </select>
               </label>
+              <label className="flex items-center justify-between gap-3">
+                <span>Layout</span>
+                <select
+                  value={settings.layout}
+                  onChange={(e) => setSettings((s) => ({ ...s, layout: e.target.value as WorkbenchSettings["layout"] }))}
+                  className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-400"
+                >
+                  <option value="side">Terminal on the right</option>
+                  <option value="stacked">Terminal below</option>
+                </select>
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span>Terminal width</span>
+                <select
+                  value={settings.termWidth}
+                  onChange={(e) => setSettings((s) => ({ ...s, termWidth: e.target.value as WorkbenchSettings["termWidth"] }))}
+                  className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-400"
+                >
+                  <option value="narrow">Narrow</option>
+                  <option value="medium">Medium</option>
+                  <option value="wide">Wide</option>
+                </select>
+              </label>
             </div>
             <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
               Settings, history and your workspace are stored only in this browser (localStorage). Shortcuts: Ctrl+Enter to
@@ -1627,9 +1821,18 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         </p>
         <p className="mt-2">
           <strong>History</strong> keeps a snapshot of every run in this browser - click one to restore its files.
-          <strong> Settings</strong> controls editor/terminal font size, indent size, line wrap and autosave. Ctrl+Enter
-          runs the program from anywhere.
+          <strong> Settings</strong> controls fonts, indent, wrap, autocomplete, editor theme, layout, smart tab and grid
+          lines.
         </p>
+        <p className="mt-2 font-semibold text-slate-800">Keyboard shortcuts (editor)</p>
+        <ul className="mt-1 list-disc space-y-1 pl-5 font-mono text-[12.5px]">
+          <li>Ctrl+Z / Ctrl+Y - undo / redo</li>
+          <li>Ctrl+Space - autocomplete (or just start typing a COBOL word)</li>
+          <li>Tab / Shift+Tab - indent (Smart Tab jumps to the COBOL margins)</li>
+          <li>Ctrl+/ - comment / uncomment the line</li>
+          <li>Alt+Up / Alt+Down - move the line up / down</li>
+          <li>Ctrl+S - save & share link · Ctrl+Enter - run</li>
+        </ul>
       </details>
     </div>
   );
@@ -1637,4 +1840,84 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function crc32(data: Uint8Array): number {
+  let c = ~0;
+  for (let i = 0; i < data.length; i++) {
+    c ^= data[i];
+    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1));
+  }
+  return (~c) >>> 0;
+}
+
+/** Build a .zip (stored, no compression) from text files - dependency-free, so
+ *  "Download all" works without adding a bundler dependency. */
+function buildZip(files: { name: string; content: string }[]): Blob {
+  const enc = new TextEncoder();
+  const parts: Uint8Array[] = [];
+  const central: Uint8Array[] = [];
+  let offset = 0;
+  const dt = new Date();
+  const dosTime = ((dt.getHours() << 11) | (dt.getMinutes() << 5) | (dt.getSeconds() >> 1)) & 0xffff;
+  const dosDate = (((dt.getFullYear() - 1980) << 9) | ((dt.getMonth() + 1) << 5) | dt.getDate()) & 0xffff;
+  for (const f of files) {
+    const nameBytes = enc.encode(f.name);
+    const data = enc.encode(f.content);
+    const crc = crc32(data);
+    const size = data.length;
+    const lh = new Uint8Array(30 + nameBytes.length);
+    const dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 0, true);
+    dv.setUint16(8, 0, true);
+    dv.setUint16(10, dosTime, true);
+    dv.setUint16(12, dosDate, true);
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, size, true);
+    dv.setUint32(22, size, true);
+    dv.setUint16(26, nameBytes.length, true);
+    dv.setUint16(28, 0, true);
+    lh.set(nameBytes, 30);
+    parts.push(lh, data);
+    const cd = new Uint8Array(46 + nameBytes.length);
+    const dv2 = new DataView(cd.buffer);
+    dv2.setUint32(0, 0x02014b50, true);
+    dv2.setUint16(4, 20, true);
+    dv2.setUint16(6, 20, true);
+    dv2.setUint16(10, 0, true);
+    dv2.setUint16(12, dosTime, true);
+    dv2.setUint16(14, dosDate, true);
+    dv2.setUint32(16, crc, true);
+    dv2.setUint32(20, size, true);
+    dv2.setUint32(24, size, true);
+    dv2.setUint16(28, nameBytes.length, true);
+    dv2.setUint32(42, offset, true);
+    cd.set(nameBytes, 46);
+    central.push(cd);
+    offset += lh.length + size;
+  }
+  const centralStart = offset;
+  let centralSize = 0;
+  for (const c of central) centralSize += c.length;
+  const end = new Uint8Array(22);
+  const dve = new DataView(end.buffer);
+  dve.setUint32(0, 0x06054b50, true);
+  dve.setUint16(8, files.length, true);
+  dve.setUint16(10, files.length, true);
+  dve.setUint32(12, centralSize, true);
+  dve.setUint32(16, centralStart, true);
+  return new Blob([...parts, ...central, end], { type: "application/zip" });
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

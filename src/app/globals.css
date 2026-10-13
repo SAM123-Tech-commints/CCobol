@@ -236,6 +236,19 @@ button {
   color: #fff;
 }
 
+/* terminal width presets (large screens / side layout) */
+@media (min-width: 1024px) {
+  .term-w-narrow {
+    width: 320px;
+  }
+  .term-w-medium {
+    width: 380px;
+  }
+  .term-w-wide {
+    width: 460px;
+  }
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;

@@ -318,6 +318,25 @@ export function QuoteIcon(props: IconProps) {
   );
 }
 
+export function RotateIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+    </svg>
+  );
+}
+
+export function DownloadAllIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3v10" />
+      <path d="m8 11 4 4 4-4" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    </svg>
+  );
+}
+
 /** COBOL.dev brand mark. */
 export function LogoMark({ size = 26, className = "" }: { size?: number; className?: string }) {
   return (
