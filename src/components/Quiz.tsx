@@ -75,6 +75,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
   const [index, setIndex] = useState(0);
   const [points, setPoints] = useState(0);
   const [done, setDone] = useState(false);
+  const [count, setCount] = useState(0);
 
   // per-question UI state
   const [picked, setPicked] = useState<number | null>(null);
@@ -124,8 +125,8 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
         ...matchQs,
       ]);
     }
-    return items;
-  }, [mode, slug, attempt, quiz, bank]);
+    return count > 0 ? items.slice(0, count) : items;
+  }, [mode, slug, attempt, quiz, bank, count]);
 
   const total = queue.length;
   const current = queue[index] as QItem | undefined;
@@ -311,7 +312,28 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
     );
   };
 
-  const chips = <div className="flex flex-wrap gap-1.5">{MODES.map((m) => chip(m.id))}</div>;
+  const chips = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {MODES.map((m) => chip(m.id))}
+      <label className="ml-auto flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+        Questions
+        <select
+          value={count}
+          onChange={(e) => {
+            setCount(Number(e.target.value));
+            restart();
+          }}
+          className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+        >
+          <option value={0}>All</option>
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={15}>15</option>
+          <option value={20}>20</option>
+        </select>
+      </label>
+    </div>
+  );
 
   if (done) {
     return (

@@ -287,6 +287,20 @@ export function SparkleIcon(props: IconProps) {
   );
 }
 
+export function BotIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="4" y="8" width="16" height="12" rx="3.5" />
+      <path d="M12 4.5V8" />
+      <circle cx="12" cy="3.5" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="13.5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="13.5" r="1.1" fill="currentColor" stroke="none" />
+      <path d="M9.5 16.6c.8.7 1.6 1 2.5 1s1.7-.3 2.5-1" />
+      <path d="M2 12.5v3M22 12.5v3" />
+    </svg>
+  );
+}
+
 /** COBOL.dev brand mark. */
 export function LogoMark({ size = 26, className = "" }: { size?: number; className?: string }) {
   return (

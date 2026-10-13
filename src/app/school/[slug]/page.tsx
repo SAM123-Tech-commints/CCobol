@@ -6,6 +6,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import VideoPlayer from "@/components/VideoPlayer";
 import SidebarNav from "@/components/SidebarNav";
 import LessonProgress from "@/components/LessonProgress";
+import CobolBot from "@/components/CobolBot";
 import { CodingSheetDiagram, CustomerInfoTree, StructureHierarchyDiagram } from "@/components/SchoolDiagrams";
 import { renderInline, TextBody } from "@/components/prose";
 import { getSchoolLesson, getSchoolNeighbours, schoolLessons } from "@/content/school";
@@ -52,6 +53,9 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
   }
   const { prev, next } = getSchoolNeighbours(slug);
   const video = videoFor(slug);
+  const botContext =
+    `Lesson ${lesson.no}: ${lesson.title}\n\n` +
+    lesson.sections.map((s) => `${s.heading}\n${s.exact}\n${s.simple ?? ""}`).join("\n\n");
 
   return (
     <main className="min-h-screen">
@@ -235,6 +239,11 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
         </div>
         </article>
       </div>
+      <CobolBot
+        context={botContext}
+        title={lesson.title}
+        quickPrompts={["Explain this in simple words", "Show me a small example", "What should I memorize for the exam?"]}
+      />
       <ScrollToTop />
     </main>
   );

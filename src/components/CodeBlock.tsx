@@ -37,7 +37,7 @@ export default function CodeBlock({ code, lang = "cobol", runnable, stdin, files
   };
 
   return (
-    <div className="my-5 overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-lg">
+    <div className="doc-dark my-5 overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-lg">
       <div className="flex items-center justify-between gap-2 border-b border-slate-700 bg-[#0b1625] px-3 py-2">
         <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />

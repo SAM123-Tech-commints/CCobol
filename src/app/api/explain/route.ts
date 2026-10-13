@@ -5,8 +5,9 @@ export const maxDuration = 30;
 
 interface ExplainBody {
   code?: string;
+  context?: string;
   focus?: string;
-  /** When present, the request is a chat question about the code (not a full explanation). */
+  /** When present, the request is a chat question (about the code OR the topic). */
   question?: string;
 }
 
@@ -19,36 +20,34 @@ export async function POST(request: Request) {
   }
 
   const code = typeof body.code === "string" ? body.code : "";
-  if (!code.trim()) {
-    return Response.json({ error: "No COBOL source was supplied." }, { status: 400 });
+  const context = typeof body.context === "string" ? body.context : "";
+  const question = typeof body.question === "string" ? body.question.trim() : "";
+  if (!code.trim() && !context.trim()) {
+    return Response.json({ error: "No COBOL source or topic was supplied." }, { status: 400 });
   }
-  if (code.length > 40_000) {
-    return Response.json({ error: "Program is too large to explain (40 KB limit)." }, { status: 413 });
+  if (code.length > 40_000 || context.length > 40_000) {
+    return Response.json({ error: "Content is too large to process (40 KB limit)." }, { status: 413 });
   }
 
   const key = process.env.GEMINI_API_KEY;
-  const question = typeof body.question === "string" ? body.question.trim() : "";
 
-  // ---- chat mode: answer a follow-up question about the code ----
+  // ---- chat mode: answer a follow-up question about the code or the topic ----
   if (question) {
     if (key) {
       try {
-        const ai = await askWithGemini(code, question, key);
+        const ai = code.trim() ? await askWithGemini(code, question, key) : await askWithGeminiTopic(context, question, key);
         if (ai) return Response.json(ai);
       } catch {
         // fall through to the built-in answer
       }
     }
-    const local = explainCobolLocally(code);
-    return Response.json({
-      source: "local" as const,
-      answer:
-        `I'm the built-in analyzer (no AI key configured), so I can answer broadly.\n\n${local.overview}\n\n` +
-        `For free-form questions like "${question}" add GEMINI_API_KEY on Vercel to enable full AI answers.`,
-    });
+    return Response.json({ source: "local" as const, answer: localAnswer(code, context, question) });
   }
 
-  // ---- explain mode: full line-by-line breakdown ----
+  // ---- explain mode: full line-by-line breakdown of the code ----
+  if (!code.trim()) {
+    return Response.json({ error: "No COBOL source was supplied." }, { status: 400 });
+  }
   const local = explainCobolLocally(code);
   if (!key) return Response.json(local);
   try {
@@ -58,6 +57,20 @@ export async function POST(request: Request) {
     // fall through to the local analyzer — explaining must never fail
   }
   return Response.json(local);
+}
+
+function localAnswer(code: string, context: string, question: string): string {
+  if (code.trim()) {
+    const local = explainCobolLocally(code);
+    return (
+      `I'm COBOL BOT running in built-in mode (no AI key configured), so I can answer broadly.\n\n${local.overview}\n\n` +
+      `For free-form questions like "${question}", add GEMINI_API_KEY on Vercel to switch me to full AI.`
+    );
+  }
+  return (
+    `I'm COBOL BOT running in built-in mode (no AI key configured). I can see this lesson's topic, but free-form answers ` +
+    `need an AI key.\n\nAdd GEMINI_API_KEY on Vercel and I'll answer "${question}" with a full explanation of the lesson.`
+  );
 }
 
 /** Ask Gemini for a beginner-friendly, line-by-line explanation as strict JSON. */
@@ -114,7 +127,7 @@ async function explainWithGemini(code: string, key: string, focus?: string): Pro
 async function askWithGemini(code: string, question: string, key: string): Promise<{ source: "gemini"; answer: string } | null> {
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const prompt = [
-    "You are a friendly COBOL tutor inside an online compiler. Answer the student's question about THEIR program.",
+    "You are COBOL BOT, a friendly COBOL tutor inside an online compiler. Answer the student's question about THEIR program.",
     "Be concise and practical. Refer to line numbers when helpful. Use short code snippets where useful.",
     "If the question is not about COBOL or this program, gently steer back.",
     "",
@@ -124,6 +137,27 @@ async function askWithGemini(code: string, question: string, key: string): Promi
     "```",
     "",
     `Question: ${question}`,
+  ].join("\n");
+
+  const answer = await geminiText(prompt, key, model, "text/plain");
+  if (!answer) return null;
+  return { source: "gemini", answer: answer.trim() };
+}
+
+/** Answer a free-form question about a lesson topic (no code). */
+async function askWithGeminiTopic(context: string, question: string, key: string): Promise<{ source: "gemini"; answer: string } | null> {
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const prompt = [
+    "You are COBOL BOT, a friendly tutor for a first-year COBOL class. A student is reading a lesson and asks a question.",
+    "Answer using the lesson material below as your source of truth, but you may add helpful general COBOL context.",
+    "Be concise, use plain words, and give a tiny example where it helps. If the question is off-topic, gently steer back to COBOL.",
+    "",
+    "Lesson material:",
+    '"""',
+    context,
+    '"""',
+    "",
+    `Student question: ${question}`,
   ].join("\n");
 
   const answer = await geminiText(prompt, key, model, "text/plain");

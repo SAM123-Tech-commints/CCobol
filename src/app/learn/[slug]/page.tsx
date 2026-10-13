@@ -11,6 +11,7 @@ import ModuleBar from "@/components/ModuleBar";
 import { slugify } from "@/lib/slug";
 import ChallengeCard from "@/components/ChallengeCard";
 import ScrollToTop from "@/components/ScrollToTop";
+import CobolBot from "@/components/CobolBot";
 import { challenges } from "@/content/challenges";
 import { getLesson, getLessonNeighbours, lessons, modules } from "@/content";
 
@@ -174,6 +175,11 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
           </div>
         </article>
       </div>
+      <CobolBot
+        context={lesson.body}
+        title={lesson.title}
+        quickPrompts={["Explain this simply", "Give me a runnable example", "Common mistakes to avoid?"]}
+      />
       <ScrollToTop />
     </main>
   );

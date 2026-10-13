@@ -802,7 +802,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
-      <div className="overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-2xl">
+      <div className="doc-dark overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-2xl">
         {/* top toolbar */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 bg-[#0b1625] px-3 py-2">
           <span className="mr-1 hidden items-center gap-1.5 sm:flex">
