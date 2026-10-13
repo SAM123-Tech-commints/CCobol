@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { BotIcon, XIcon } from "@/components/icons";
+import { BotIcon, MinusIcon, QuoteIcon, XIcon } from "@/components/icons";
 import type { ExplainResult } from "@/lib/cobol/explain";
 
 type Msg =
@@ -27,12 +27,24 @@ interface ChatProps {
   title?: string;
   quickPrompts?: string[];
   placeholder?: string;
-  footer?: ReactNode;
+  /** A reference excerpt to ask about (e.g. text the student highlighted). */
+  seed?: { id: number; text: string } | null;
+  /** Bump this number to clear the conversation. */
+  resetSignal?: number;
   className?: string;
 }
 
 /** The COBOL BOT chat engine, shared by the compiler dock and the lesson launcher. */
-export function BotChat({ code, context, title, quickPrompts = [], placeholder = "Ask COBOL BOT anything…", footer, className }: ChatProps) {
+export function BotChat({
+  code,
+  context,
+  title,
+  quickPrompts = [],
+  placeholder = "Ask COBOL BOT anything…",
+  seed,
+  resetSignal,
+  className,
+}: ChatProps) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,6 +55,12 @@ export function BotChat({ code, context, title, quickPrompts = [], placeholder =
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (resetSignal === undefined) return;
+    setMessages([]);
+    setInput("");
+  }, [resetSignal]);
 
   const post = async (payload: { question?: string }) => {
     setLoading(true);
@@ -68,13 +86,23 @@ export function BotChat({ code, context, title, quickPrompts = [], placeholder =
 
   const ask = async (q: string) => {
     const question = q.trim();
-    if (!question || loading) return;
+    if (!question) return;
     setMessages((m) => [...m, { id: uid++, role: "user", text: question }]);
     setInput("");
     const r = await post({ question });
     const text = (r.error as string) ?? (r.answer as string) ?? "Sorry, I could not answer that.";
     setMessages((m) => [...m, { id: uid++, role: "bot", text, ai: r.source === "gemini" }]);
   };
+
+  // Ask automatically when a reference excerpt is supplied (highlight-to-ask).
+  const lastSeed = useRef<number | null>(null);
+  useEffect(() => {
+    if (seed && seed.id !== lastSeed.current) {
+      lastSeed.current = seed.id;
+      void ask(seed.text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed]);
 
   return (
     <div className={`cobolbot-chat${className ? ` ${className}` : ""}`}>
@@ -87,7 +115,7 @@ export function BotChat({ code, context, title, quickPrompts = [], placeholder =
               <p>
                 {code
                   ? "I can explain your program line by line, or answer anything about it."
-                  : `Ask me anything about ${title ?? "this topic"} — I'll explain it in plain words.`}
+                  : `Ask me anything about ${title ?? "this lesson"} — or highlight any text on the page and I'll explain it.`}
               </p>
               {code ? (
                 <button type="button" className="cobolbot-explain" onClick={explain} disabled={loading}>
@@ -130,7 +158,6 @@ export function BotChat({ code, context, title, quickPrompts = [], placeholder =
           Send
         </button>
       </form>
-      {footer}
     </div>
   );
 }
@@ -177,29 +204,88 @@ function BotBubble({ msg }: { msg: Msg }) {
   );
 }
 
-/** Floating COBOL BOT launcher for lesson pages (school + tutorial). */
+/** Floating COBOL BOT for lesson pages: bottom-left launcher, minimizable/exitable,
+ *  and a highlight-to-ask capture so the student can select text and quiz the bot. */
 export default function CobolBot({ context, title, quickPrompts }: { context: string; title?: string; quickPrompts?: string[] }) {
   const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const [seed, setSeed] = useState<{ id: number; text: string } | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
+  const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null);
+  const selRef = useRef<{ text: string; x: number; y: number } | null>(null);
+  const seedId = useRef(0);
+
+  useEffect(() => {
+    const onUp = () => {
+      const s = window.getSelection();
+      const text = s?.toString().replace(/\s+/g, " ").trim() ?? "";
+      const anchor = s?.anchorNode as Node | null;
+      const insideBot = anchor?.parentElement?.closest(".cobolbot-panel, .cobolbot-launcher") ?? null;
+      if (hidden || insideBot || text.length < 4 || text.length > 600 || !s || s.rangeCount === 0) {
+        selRef.current = null;
+        setSel(null);
+        return;
+      }
+      const rect = s.getRangeAt(0).getBoundingClientRect();
+      const value = { text, x: Math.min(Math.max(rect.left + rect.width / 2, 90), window.innerWidth - 90), y: rect.top };
+      selRef.current = value;
+      setSel(value);
+    };
+    document.addEventListener("mouseup", onUp);
+    return () => document.removeEventListener("mouseup", onUp);
+  }, [hidden]);
+
+  const askSelection = () => {
+    const current = selRef.current;
+    if (!current) return;
+    seedId.current += 1;
+    setSeed({ id: seedId.current, text: `Explain this highlighted part of the lesson:\n\n"${current.text}"` });
+    setOpen(true);
+    setHidden(false);
+    selRef.current = null;
+    setSel(null);
+    window.getSelection()?.removeAllRanges();
+  };
+
+  if (hidden) return null;
+
   return (
     <>
+      {sel ? (
+        <button type="button" className="cobolbot-selectask" style={{ left: sel.x, top: sel.y }} onMouseDown={(e) => e.preventDefault()} onClick={askSelection}>
+          <BotIcon width={14} height={14} />
+          Ask COBOL BOT
+        </button>
+      ) : null}
+
       {open ? (
         <div className="cobolbot-panel" role="dialog" aria-label="COBOL BOT">
           <div className="cobolbot-panel-head">
             <BotAvatar size={30} />
-            <div>
+            <div className="cobolbot-panel-title">
               <strong>COBOL BOT</strong>
-              <small>{title ?? "Ask about this topic"}</small>
+              <small>{title ?? "Ask about this lesson"}</small>
             </div>
-            <button type="button" className="cobolbot-close" onClick={() => setOpen(false)} aria-label="Close COBOL BOT">
-              <XIcon width={16} height={16} />
-            </button>
+            <div className="cobolbot-panel-actions">
+              <button type="button" title="New chat" onClick={() => setResetSignal((n) => n + 1)}>
+                <QuoteIcon width={15} height={15} />
+              </button>
+              <button type="button" title="Minimize" onClick={() => setOpen(false)}>
+                <MinusIcon width={15} height={15} />
+              </button>
+              <button type="button" title="Exit COBOL BOT" onClick={() => { setOpen(false); setHidden(true); }}>
+                <XIcon width={15} height={15} />
+              </button>
+            </div>
           </div>
-          <BotChat context={context} title={title} quickPrompts={quickPrompts} placeholder="Ask about this lesson…" />
+          <BotChat context={context} title={title} quickPrompts={quickPrompts} seed={seed} resetSignal={resetSignal} placeholder="Ask about this lesson…" />
         </div>
       ) : null}
-      <button type="button" className="cobolbot-launcher" onClick={() => setOpen((v) => !v)} aria-label="Open COBOL BOT">
+
+      <button type="button" className="cobolbot-launcher" onClick={() => { setOpen((v) => !v); setSel(null); }} aria-label="Open COBOL BOT">
         <BotAvatar size={34} />
         <span>COBOL BOT</span>
+        {!open ? <em className="cobolbot-launcher-dot" /> : null}
       </button>
     </>
   );

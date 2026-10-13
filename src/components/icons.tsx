@@ -301,6 +301,23 @@ export function BotIcon(props: IconProps) {
   );
 }
 
+export function MinusIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function QuoteIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M7 7h4v4c0 3-1.5 5-4 6" />
+      <path d="M15 7h4v4c0 3-1.5 5-4 6" />
+    </svg>
+  );
+}
+
 /** COBOL.dev brand mark. */
 export function LogoMark({ size = 26, className = "" }: { size?: number; className?: string }) {
   return (

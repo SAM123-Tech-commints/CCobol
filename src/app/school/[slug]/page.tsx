@@ -7,6 +7,8 @@ import VideoPlayer from "@/components/VideoPlayer";
 import SidebarNav from "@/components/SidebarNav";
 import LessonProgress from "@/components/LessonProgress";
 import CobolBot from "@/components/CobolBot";
+import KeyTerms from "@/components/KeyTerms";
+import { bankFor } from "@/content/quizbank";
 import { CodingSheetDiagram, CustomerInfoTree, StructureHierarchyDiagram } from "@/components/SchoolDiagrams";
 import { renderInline, TextBody } from "@/components/prose";
 import { getSchoolLesson, getSchoolNeighbours, schoolLessons } from "@/content/school";
@@ -56,6 +58,7 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
   const botContext =
     `Lesson ${lesson.no}: ${lesson.title}\n\n` +
     lesson.sections.map((s) => `${s.heading}\n${s.exact}\n${s.simple ?? ""}`).join("\n\n");
+  const bank = bankFor(slug);
 
   return (
     <main className="min-h-screen">
@@ -100,6 +103,22 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
         </p>
         <div className="mt-4">
           <LessonProgress slug={slug} />
+        </div>
+
+        {/* mobile section navigation (the sidebar is desktop-only) */}
+        <div className="toc-mobile lg:hidden">
+          <details>
+            <summary>
+              On this lesson <span>({lesson.sections.length} sections)</span>
+            </summary>
+            <ol>
+              {lesson.sections.map((s, idx) => (
+                <li key={idx}>
+                  <a href={`#s-${idx}`}>{s.heading.replace(/^\d+\.\s*/, "")}</a>
+                </li>
+              ))}
+            </ol>
+          </details>
         </div>
 
         {/* objectives */}
@@ -189,16 +208,26 @@ export default async function SchoolLessonPage({ params }: { params: Promise<{ s
                 ) : null}
 
                 {s.simple ? (
-                  <div className="mt-5 border-l-4 border-sky-300 pl-4 dark:border-sky-400/40">
-                    <p className="text-[15px] leading-relaxed text-slate-600 dark:text-slate-400">
-                      {renderInline(s.simple)}
-                    </p>
-                  </div>
+                  <details className="review-note" open>
+                    <summary>Plain words — tap to review</summary>
+                    <p>{renderInline(s.simple)}</p>
+                  </details>
                 ) : null}
               </section>
             );
           })}
         </article>
+
+        {/* key terms - flashcards for memorization */}
+        {bank?.terms.length ? (
+          <div className="mt-14 border-t border-slate-200 pt-10 dark:border-[#243652]">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Key terms to memorize</h2>
+            <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Tap a card to reveal the definition, then tap again to hide it and test yourself.
+            </p>
+            <KeyTerms terms={bank.terms} />
+          </div>
+        ) : null}
 
         {/* quiz */}
         <div className="mt-14 border-t border-slate-200 pt-10 dark:border-[#243652]">
