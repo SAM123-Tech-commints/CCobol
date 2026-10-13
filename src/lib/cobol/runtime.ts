@@ -1712,6 +1712,125 @@ class Interp {
         num = parseFloat(text);
         break;
       }
+      case "ABSOLUTE-VALUE":
+        num = Math.abs(n(0));
+        numeric = true;
+        text = String(num);
+        break;
+      case "CURRENCY-SYMBOL":
+        text = "$";
+        break;
+      case "MONETARY-DECIMAL-POINT":
+        text = ".";
+        break;
+      case "MONETARY-THOUSANDS-SEPARATOR":
+        text = ",";
+        break;
+      case "BYTE-LENGTH":
+      case "LENGTH-AN":
+        num = utf8Length(args[0]?.text ?? "");
+        numeric = true;
+        text = String(num);
+        break;
+      case "NUMVAL-F": {
+        const v = parseFloat((args[0]?.text ?? "").replace(/,/g, "").trim());
+        num = isFinite(v) ? v : 0;
+        numeric = true;
+        text = String(num);
+        break;
+      }
+      case "TEST-NUMVAL":
+        num = numericErrorPosition(args[0]?.text ?? "", false, false);
+        numeric = true;
+        text = String(num);
+        break;
+      case "TEST-NUMVAL-C":
+        num = numericErrorPosition(args[0]?.text ?? "", true, true);
+        numeric = true;
+        text = String(num);
+        break;
+      case "TEST-NUMVAL-F":
+        num = floatErrorPosition(args[0]?.text ?? "");
+        numeric = true;
+        text = String(num);
+        break;
+      case "FORMATTED-CURRENT-DATE": {
+        const d = new Date();
+        const p = (v: number) => String(v).padStart(2, "0");
+        text = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}+00:00`;
+        break;
+      }
+      case "FORMATTED-DATE":
+        text = formatDayInt(n(0), str(1));
+        break;
+      case "FORMATTED-TIME":
+        text = formatTimeInt(n(0), str(1));
+        break;
+      case "FORMATTED-DATETIME":
+        text = formatTimeInt(n(1), formatDayInt(n(0), str(2)));
+        break;
+      case "INTEGER-OF-FORMATTED-DATE":
+        num = parseFormattedDate(str(0), str(1));
+        numeric = true;
+        text = String(num);
+        break;
+      case "TEST-FORMATTED-DATETIME":
+        num = parseFormattedDate(str(0), str(1)) !== 0 ? 0 : 1;
+        numeric = true;
+        text = String(num);
+        break;
+      case "HIGHEST-ALGEBRAIC":
+      case "LOWEST-ALGEBRAIC": {
+        const arg = e.args[0];
+        const pic = arg && arg.k === "ref" ? this.resolveLoc(arg).field.pic : null;
+        if (pic && isNumericPic(pic)) {
+          const max = Math.pow(10, pic.digits - pic.decimals) - Math.pow(10, -pic.decimals);
+          const v = e.name === "LOWEST-ALGEBRAIC" ? (pic.signed ? -max : 0) : max;
+          num = v;
+          text = v.toFixed(pic.decimals);
+        } else {
+          num = 0;
+          text = "0";
+        }
+        numeric = true;
+        break;
+      }
+      case "LOCALE-COMPARE": {
+        const a = str(0);
+        const b = str(1);
+        num = a < b ? -1 : a > b ? 1 : 0;
+        numeric = true;
+        text = String(num);
+        break;
+      }
+      case "MODULE-ID":
+        text = this.unit.name || "PROGRAM";
+        break;
+      case "MODULE-CALLER-ID":
+        text = this.stack.length > 1 ? this.stack[this.stack.length - 2].unit.name : "";
+        break;
+      case "MODULE-SOURCE":
+      case "MODULE-PATH":
+        text = `${this.unit.name || "PROGRAM"}.cbl`;
+        break;
+      case "MODULE-DATE": {
+        const d = new Date();
+        const p = (v: number) => String(v).padStart(2, "0");
+        text = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+        break;
+      }
+      case "MODULE-TIME": {
+        const d = new Date();
+        const p = (v: number) => String(v).padStart(2, "0");
+        text = `${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+        break;
+      }
+      case "MODULE-FORMATTED-DATE": {
+        const d = new Date();
+        const p = (v: number) => String(v).padStart(2, "0");
+        text = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+        break;
+      }
       default:
         this.warnings.push(`Line ${e.line}: intrinsic function ${e.name} is not implemented - zero returned.`);
         num = 0;
@@ -1742,6 +1861,102 @@ class Interp {
     const cleaned = text.replace(/,/g, "").trim();
     return parseFloat(cleaned) || 0;
   }
+}
+
+/** UTF-8 byte length of a string (for BYTE-LENGTH / LENGTH-AN). */
+function utf8Length(s: string): number {
+  let bytes = 0;
+  for (const ch of s) {
+    const cp = ch.codePointAt(0) ?? 0;
+    bytes += cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+  }
+  return bytes;
+}
+
+/** FUNCTION TEST-NUMVAL*: 0 when valid, otherwise the 1-based position of the offending character. */
+function numericErrorPosition(s: string, allowCommas: boolean, allowCurrency: boolean): number {
+  const t = s.trim();
+  if (t === "") return 1;
+  let digit = false;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (ch >= "0" && ch <= "9") {
+      digit = true;
+      continue;
+    }
+    if ((ch === "+" || ch === "-") && i === 0) continue;
+    if (ch === "." || ch === " ") continue;
+    if (allowCommas && ch === ",") continue;
+    if (allowCurrency && (ch === "$" || ch === "£" || ch === "€")) continue;
+    return i + 1;
+  }
+  return digit ? 0 : 1;
+}
+
+function floatErrorPosition(s: string): number {
+  const t = s.trim();
+  if (t === "") return 1;
+  return /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/.test(t) ? 0 : 1;
+}
+
+/** FUNCTION FORMATTED-DATE: render an integer day number using YYYY/YY/DDD/MM/DD tokens. */
+function formatDayInt(dayInt: number, fmt: string): string {
+  const base = Date.UTC(1600, 11, 31);
+  const d = new Date(base + Math.floor(dayInt) * 86400000);
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth() + 1;
+  const day = d.getUTCDate();
+  const doy = Math.round((d.getTime() - Date.UTC(y, 0, 1)) / 86400000) + 1;
+  const p2 = (v: number) => String(v).padStart(2, "0");
+  const p3 = (v: number) => String(v).padStart(3, "0");
+  return fmt
+    .replace(/YYYY/g, String(y))
+    .replace(/YY/g, p2(y % 100))
+    .replace(/DDD/g, p3(doy))
+    .replace(/MM/g, p2(m))
+    .replace(/DD/g, p2(day));
+}
+
+/** FUNCTION FORMATTED-TIME: render seconds-since-midnight using hh/mm/ss tokens. */
+function formatTimeInt(seconds: number, fmt: string): string {
+  const s = ((Math.floor(seconds) % 86400) + 86400) % 86400;
+  const p2 = (v: number) => String(v).padStart(2, "0");
+  return fmt
+    .replace(/hh/gi, p2(Math.floor(s / 3600)))
+    .replace(/mm/gi, p2(Math.floor((s % 3600) / 60)))
+    .replace(/ss/gi, p2(s % 60));
+}
+
+/** FUNCTION INTEGER-OF-FORMATTED-DATE: parse a formatted date back to an integer day number. */
+function parseFormattedDate(s: string, fmt: string): number {
+  const order: string[] = [];
+  const pattern = fmt.replace(/YYYY|YY|DDD|MM|DD/g, (t) => {
+    order.push(t);
+    return "(\\d+)";
+  });
+  let m: RegExpMatchArray | null = null;
+  try {
+    m = s.trim().match(new RegExp("^" + pattern + "$"));
+  } catch {
+    return 0;
+  }
+  if (!m) return 0;
+  const matched: RegExpMatchArray = m;
+  let y = 0;
+  let mo = 1;
+  let day = 1;
+  let doy = 0;
+  order.forEach((tok, i) => {
+    const v = parseInt(matched[i + 1], 10);
+    if (tok === "YYYY") y = v;
+    else if (tok === "YY") y = 2000 + v;
+    else if (tok === "MM") mo = v;
+    else if (tok === "DD") day = v;
+    else if (tok === "DDD") doy = v;
+  });
+  const base = Date.UTC(1600, 11, 31);
+  if (doy > 0) return Math.round((Date.UTC(y, 0, 1) + (doy - 1) * 86400000 - base) / 86400000);
+  return Math.round((Date.UTC(y, mo - 1, day) - base) / 86400000);
 }
 
 interface Loc {
