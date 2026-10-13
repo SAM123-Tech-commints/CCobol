@@ -1908,7 +1908,7 @@ function buildZip(files: { name: string; content: string }[]): Blob {
   dve.setUint16(10, files.length, true);
   dve.setUint32(12, centralSize, true);
   dve.setUint32(16, centralStart, true);
-  return new Blob([...parts, ...central, end], { type: "application/zip" });
+  return new Blob([...parts, ...central, end] as unknown as BlobPart[], { type: "application/zip" });
 }
 
 function downloadBlob(blob: Blob, filename: string) {
