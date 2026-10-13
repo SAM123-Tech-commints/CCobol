@@ -278,6 +278,15 @@ export function MenuIcon(props: IconProps) {
   );
 }
 
+export function SparkleIcon(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3 13.9 8.6 19.5 10.5 13.9 12.4 12 18 10.1 12.4 4.5 10.5 10.1 8.6 12 3Z" />
+      <path d="M19 15.5 19.7 17.3 21.5 18 19.7 18.7 19 20.5 18.3 18.7 16.5 18 18.3 17.3 19 15.5Z" />
+    </svg>
+  );
+}
+
 /** COBOL.dev brand mark. */
 export function LogoMark({ size = 26, className = "" }: { size?: number; className?: string }) {
   return (

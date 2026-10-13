@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CodeBlock from "@/components/CodeBlock";
-import { challenges } from "@/content/challenges";
+import { challenges, type Challenge } from "@/content/challenges";
 
 function compilerLink(code: string) {
   // No stdin is carried over: the terminal waits for the student to type input
@@ -21,16 +21,32 @@ interface CheckState {
   message: string;
 }
 
-/** Exercises page — template layout, reference solutions always visible + auto-checking. */
-export default function ExercisesBrowser() {
+interface Props {
+  /** Which exercises to show. Defaults to the general exercise set. */
+  items?: Challenge[];
+  title?: string;
+  lead?: string;
+  /** Render as a <section> (for embedding inside the school page) instead of a full <main>. */
+  embedded?: boolean;
+}
+
+/** Exercise browser — reference solutions always visible, auto-checking and a
+ *  line-by-line explanation for every solution. Reused for the general
+ *  exercises page and the school practice tab. */
+export default function ExercisesBrowser({
+  items = challenges,
+  title = "COBOL Exercises",
+  lead = "Practice with real problems. Try each one yourself, reveal the reference solution, then run it in the online compiler.",
+  embedded = false,
+}: Props) {
   const [filter, setFilter] = useState("All");
   const [checks, setChecks] = useState<Record<string, CheckState>>({});
 
   const difficulties = useMemo(() => ["All", "Starter", "Easy", "Medium"], []);
-  const shown = challenges.filter((c) => filter === "All" || c.difficulty === filter);
+  const shown = items.filter((c) => filter === "All" || c.difficulty === filter);
 
   const check = async (id: string) => {
-    const challenge = challenges.find((c) => c.id === id);
+    const challenge = items.find((c) => c.id === id);
     if (!challenge) return;
     setChecks((p) => ({ ...p, [id]: { status: "checking", message: "Running your COBOL program…" } }));
     try {
@@ -69,14 +85,11 @@ export default function ExercisesBrowser() {
     }
   };
 
-  return (
-    <main className="page">
+  const body = (
+    <>
       <header className="page-head">
-        <h1>COBOL Exercises</h1>
-        <p className="lead">
-          Practice with real problems. Try each one yourself, reveal the reference solution, then run it in the online
-          compiler.
-        </p>
+        <h1>{title}</h1>
+        <p className="lead">{lead}</p>
         <div className="row chips">
           {difficulties.map((d) => (
             <button key={d} type="button" className={filter === d ? "chip on" : "chip"} onClick={() => setFilter(d)}>
@@ -131,6 +144,8 @@ export default function ExercisesBrowser() {
           );
         })}
       </div>
-    </main>
+    </>
   );
+
+  return embedded ? <section className="school-practice">{body}</section> : <main className="page">{body}</main>;
 }

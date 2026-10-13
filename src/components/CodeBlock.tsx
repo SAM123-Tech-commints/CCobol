@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { highlightCobol } from "@/lib/cobol/highlight";
 import { PlayIcon } from "@/components/icons";
+import CodeExplainer from "@/components/CodeExplainer";
 
 interface Props {
   code: string;
@@ -12,14 +13,18 @@ interface Props {
   stdin?: string;
   files?: Record<string, string>;
   title?: string;
+  /** Show the line-by-line explainer under the code (COBOL only). Default: on. */
+  explain?: boolean;
 }
 
-/** Code block with COBOL syntax highlighting and an optional "Run" button. */
-export default function CodeBlock({ code, lang = "cobol", runnable, stdin, files, title }: Props) {
+/** Code block with COBOL syntax highlighting, an optional "Run" button and a
+ *  line-by-line explanation toggle. */
+export default function CodeBlock({ code, lang = "cobol", runnable, stdin, files, title, explain = true }: Props) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const isCobol = lang === "cobol" || lang === "cbl";
   const trimmed = code.replace(/\s+$/, "");
-  const html = useMemo(() => (lang === "cobol" || lang === "cbl" ? highlightCobol(trimmed) : `<span>${escapePlainText(trimmed)}</span>`), [trimmed, lang]);
+  const html = useMemo(() => (isCobol ? highlightCobol(trimmed) : `<span>${escapePlainText(trimmed)}</span>`), [trimmed, isCobol]);
 
   const run = () => {
     const payload = { code: trimmed, stdin: stdin ?? "", files: files ?? {}, title: title ?? "COBOL program" };
@@ -37,6 +42,7 @@ export default function CodeBlock({ code, lang = "cobol", runnable, stdin, files
   };
 
   return (
+    <>
     <div className="my-5 overflow-hidden rounded-xl border border-slate-700 bg-[#091524] shadow-lg">
       <div className="flex items-center justify-between gap-2 border-b border-slate-700 bg-[#0b1625] px-3 py-2">
         <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -67,6 +73,8 @@ export default function CodeBlock({ code, lang = "cobol", runnable, stdin, files
         <code className="font-mono text-slate-200" dangerouslySetInnerHTML={{ __html: html }} />
       </pre>
     </div>
+    {explain && isCobol ? <CodeExplainer code={trimmed} title={title} compact /> : null}
+    </>
   );
 }
 

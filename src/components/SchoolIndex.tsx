@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import VideoPlayer from "@/components/VideoPlayer";
+import ExercisesBrowser from "@/components/ExercisesBrowser";
 import { BookIcon, CheckIcon, CodeIcon, LayersIcon, RouteIcon, ServerIcon, VideoIcon } from "@/components/icons";
 import { schoolLessons } from "@/content/school";
-import { challenges } from "@/content/challenges";
+import { schoolExercises } from "@/content/schoolExercises";
 import { videoFor } from "@/content/videos";
 import { getDoneLessons, markLessonDone, unmarkLessonDone } from "@/lib/progress";
 
@@ -20,7 +21,7 @@ function levelOf(no: number) {
 export default function SchoolIndex() {
   const [done, setDone] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
-  const [view, setView] = useState<"lessons" | "videos">("lessons");
+  const [view, setView] = useState<"lessons" | "videos" | "practice">("lessons");
   const [level, setLevel] = useState("All");
 
   useEffect(() => {
@@ -118,6 +119,10 @@ export default function SchoolIndex() {
           <VideoIcon width={16} height={16} />
           Video library {video ? null : <span>Coming soon</span>}
         </button>
+        <button type="button" className={view === "practice" ? "active" : ""} onClick={() => setView("practice")}>
+          <CodeIcon width={16} height={16} />
+          Practice
+        </button>
       </nav>
 
       {view === "lessons" ? (
@@ -193,7 +198,7 @@ export default function SchoolIndex() {
               </div>
               <div>
                 <span>Practice exercises</span>
-                <strong>{challenges.length}</strong>
+                <strong>{schoolExercises.length}</strong>
               </div>
               <div>
                 <span>Level</span>
@@ -202,7 +207,7 @@ export default function SchoolIndex() {
             </div>
           </aside>
         </div>
-      ) : (
+      ) : view === "videos" ? (
         <section className="video-library">
           <div className="video-library-head">
             <div>
@@ -230,6 +235,13 @@ export default function SchoolIndex() {
             </div>
           )}
         </section>
+      ) : (
+        <ExercisesBrowser
+          items={schoolExercises}
+          embedded
+          title="School practice"
+          lead="Exercises that follow your class lessons (school-l1 to school-l4). Reveal the reference solution, explain it line by line, then check your own code."
+        />
       )}
 
       {/* footer */}
