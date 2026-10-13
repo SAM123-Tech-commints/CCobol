@@ -110,19 +110,20 @@ export default function Flashcards({ terms, title }: { terms: TermPair[]; title?
       </div>
 
       {card ? (
-        <button type="button" className={`flashcard${flipped ? " flipped" : ""}`} onClick={() => setFlipped((f) => !f)} aria-label="Flip card">
-          <span className="flashcard-inner">
-            <span className="flashcard-face flashcard-front">
+        <div className="flashcard" onClick={() => setFlipped((f) => !f)} role="button" aria-label="Flip card" tabIndex={0}>
+          {flipped ? (
+            <div className="flashcard-face flashcard-back">
+              <small>Definition</small>
+              <span>{card.def}</span>
+            </div>
+          ) : (
+            <div className="flashcard-face flashcard-front">
               <small>Term</small>
               <strong>{card.term}</strong>
               <em>tap to flip</em>
-            </span>
-            <span className="flashcard-face flashcard-back">
-              <small>Definition</small>
-              <span>{card.def}</span>
-            </span>
-          </span>
-        </button>
+            </div>
+          )}
+        </div>
       ) : null}
 
       <div className="flash-actions">

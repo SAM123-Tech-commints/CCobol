@@ -1133,9 +1133,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           ? "flex-col-reverse"
           : ""
   }`;
+  const termWidthClass =
+    settings.termWidth === "narrow" ? "lg:w-[320px]" : settings.termWidth === "wide" ? "lg:w-[460px]" : "lg:w-[380px]";
   const termClass = `flex min-h-[300px] shrink-0 flex-col bg-black ${
     isSideLayout
-      ? `term-w-${settings.termWidth} border-t border-slate-800 lg:border-t-0 ${settings.layout === "side-left" ? "lg:border-r" : "lg:border-l"}`
+      ? `${termWidthClass} border-t border-slate-800 lg:border-t-0 ${settings.layout === "side-left" ? "lg:border-r" : "lg:border-l"}`
       : settings.layout === "stacked-above"
         ? "border-b border-slate-800"
         : "border-t border-slate-800"
