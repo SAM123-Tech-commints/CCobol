@@ -249,6 +249,46 @@ button {
   }
 }
 
+/* ---- COBOL cheat sheet ---- */
+.cheat-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+.cheat-toc a {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  transition: 0.15s ease;
+}
+.cheat-toc a:hover {
+  border-color: var(--accent);
+  color: var(--heading);
+}
+.cheat-section {
+  margin-top: 2.5rem;
+}
+.cheat-section h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--heading);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.6rem;
+  margin-bottom: 1rem;
+}
+.cheat-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;

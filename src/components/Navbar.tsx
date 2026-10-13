@@ -4,15 +4,16 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import SearchDialog from "@/components/SearchDialog";
-import { BookIcon, CodeIcon, GraduationCapIcon, MenuIcon, QuizIcon, SearchIcon, TerminalIcon, XIcon } from "@/components/icons";
+import { BookIcon, CodeIcon, GraduationCapIcon, LayersIcon, MenuIcon, QuizIcon, SearchIcon, TerminalIcon, XIcon } from "@/components/icons";
 
-type NavId = "tutorials" | "school" | "exercises" | "quiz" | "compiler";
+type NavId = "tutorials" | "school" | "exercises" | "quiz" | "cheatsheet" | "compiler";
 
 const LINKS: { id: NavId; href: string; label: string; Icon: typeof BookIcon }[] = [
   { id: "tutorials", href: "/", label: "Tutorials", Icon: BookIcon },
   { id: "school", href: "/school", label: "School", Icon: GraduationCapIcon },
   { id: "exercises", href: "/exercises", label: "Exercises", Icon: CodeIcon },
   { id: "quiz", href: "/quiz", label: "Quizzes", Icon: QuizIcon },
+  { id: "cheatsheet", href: "/cheatsheet", label: "Cheat Sheet", Icon: LayersIcon },
 ];
 
 /** Template brand mark (gradient C). */

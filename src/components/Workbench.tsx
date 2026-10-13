@@ -102,8 +102,8 @@ export interface WorkbenchSettings {
   autocomplete: boolean;
   /** Editor colour theme id. */
   editorTheme: string;
-  /** Terminal placement: side-by-side (right) or stacked (below). */
-  layout: "side" | "stacked";
+  /** Editor/terminal arrangement. */
+  layout: "side-right" | "side-left" | "stacked-below" | "stacked-above" | "editor-only" | "terminal-only";
   /** Terminal width on large screens. */
   termWidth: "narrow" | "medium" | "wide";
 }
@@ -119,9 +119,19 @@ const DEFAULT_SETTINGS: WorkbenchSettings = {
   gridLines: true,
   autocomplete: true,
   editorTheme: "cobol",
-  layout: "side",
+  layout: "side-right",
   termWidth: "medium",
 };
+
+/** Layout choices shown in Settings. */
+const LAYOUTS: { id: WorkbenchSettings["layout"]; label: string }[] = [
+  { id: "side-right", label: "Terminal on the right" },
+  { id: "side-left", label: "Terminal on the left" },
+  { id: "stacked-below", label: "Terminal below" },
+  { id: "stacked-above", label: "Terminal above" },
+  { id: "editor-only", label: "Editor only (no terminal)" },
+  { id: "terminal-only", label: "Terminal only (no editor)" },
+];
 
 /** Editor themes shown in Settings. */
 const EDITOR_THEMES: { id: string; label: string }[] = [
@@ -319,7 +329,14 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   useEffect(() => {
     try {
       const s = localStorage.getItem(SETTINGS_KEY);
-      if (s) setSettings({ ...DEFAULT_SETTINGS, ...(JSON.parse(s) as Partial<WorkbenchSettings>) });
+      if (s) {
+        const merged = { ...DEFAULT_SETTINGS, ...(JSON.parse(s) as Partial<WorkbenchSettings>) };
+        // migrate legacy layout ids
+        const lay = merged.layout as string;
+        if (lay === "side") merged.layout = "side-right";
+        else if (lay === "stacked") merged.layout = "stacked-below";
+        setSettings(merged);
+      }
       const h = localStorage.getItem(HISTORY_KEY);
       if (h) setHistory(JSON.parse(h) as HistoryEntry[]);
       const shares = typeof window !== "undefined" ? window.location.search : "";
@@ -1102,6 +1119,26 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const writtenFiles = Object.entries(result?.fileOutput ?? {});
   const visibleWarnings = (result?.warnings ?? []).filter((w) => !(awaitingInput && w.includes(STARVED_MARKER)));
 
+  const isSideLayout = settings.layout === "side-right" || settings.layout === "side-left";
+  const showEditorPane = settings.layout !== "terminal-only";
+  const showTerminalPane = settings.layout !== "editor-only";
+  const paneClass = `flex min-h-[480px] flex-col ${
+    settings.layout === "side-left"
+      ? "lg:flex-row-reverse"
+      : settings.layout === "side-right"
+        ? "lg:flex-row"
+        : settings.layout === "stacked-above"
+          ? "flex-col-reverse"
+          : ""
+  }`;
+  const termClass = `flex min-h-[300px] shrink-0 flex-col bg-black ${
+    isSideLayout
+      ? `term-w-${settings.termWidth} border-t border-slate-800 lg:border-t-0 ${settings.layout === "side-left" ? "lg:border-r" : "lg:border-l"}`
+      : settings.layout === "stacked-above"
+        ? "border-b border-slate-800"
+        : "border-t border-slate-800"
+  }${showTerminalPane ? "" : " hidden"}`;
+
   return (
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.cobol,.cpy,.dat,.txt" onChange={onUpload} className="hidden" />
@@ -1230,8 +1267,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
         </div>
 
         {/* main 2-pane area: explorer+editor | terminal */}
-        <div className={`flex min-h-[480px] flex-col ${settings.layout === "side" ? "lg:flex-row" : ""}`}>
-          <div className="flex min-w-0 flex-1 flex-col sm:flex-row">
+        <div className={paneClass}>
+          <div className={`flex min-w-0 flex-1 flex-col sm:flex-row${showEditorPane ? "" : " hidden"}`}>
             {/* explorer */}
             <div className="shrink-0 border-b border-slate-800 bg-[#0a1422] sm:w-52 sm:border-b-0 sm:border-r">
               <div className="flex items-center justify-between px-3 pt-3 pb-1">
@@ -1428,7 +1465,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </div>
 
           {/* terminal */}
-          <div className={`flex min-h-[300px] shrink-0 flex-col border-t border-slate-800 bg-black ${settings.layout === "side" ? `term-w-${settings.termWidth} lg:border-t-0 lg:border-l` : ""}`}>
+          <div className={termClass}>
             <div className="flex items-center gap-2 border-b border-slate-800 bg-[#0b1625] px-3 py-1.5">
               <p className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400">Terminal</p>
               {exeName ? <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] text-emerald-300">./{exeName}</span> : null}
@@ -1751,8 +1788,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   onChange={(e) => setSettings((s) => ({ ...s, layout: e.target.value as WorkbenchSettings["layout"] }))}
                   className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-400"
                 >
-                  <option value="side">Terminal on the right</option>
-                  <option value="stacked">Terminal below</option>
+                  {LAYOUTS.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.label}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="flex items-center justify-between gap-3">
