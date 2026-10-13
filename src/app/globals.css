@@ -2863,3 +2863,17 @@ html.dark .review-note p {
 .keyterm.open .keyterm-def {
   color: var(--text);
 }
+
+/* ---- compiler editor: COBOL coding-sheet margin guides (behind the text) ---- */
+.cobol-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cobol-grid span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(145, 167, 194, 0.18);
+}

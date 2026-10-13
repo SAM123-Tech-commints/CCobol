@@ -92,6 +92,10 @@ export interface WorkbenchSettings {
   wrap: boolean;
   autoHistory: boolean;
   autoWorkspace: boolean;
+  /** COBOL "smart tab": Tab jumps to the next COBOL margin column (8 / 12 / 73). */
+  smartTab: boolean;
+  /** Vertical margin guides for the COBOL coding sheet (Area A / Area B). */
+  gridLines: boolean;
 }
 
 const DEFAULT_SETTINGS: WorkbenchSettings = {
@@ -101,12 +105,16 @@ const DEFAULT_SETTINGS: WorkbenchSettings = {
   wrap: false,
   autoHistory: true,
   autoWorkspace: true,
+  smartTab: true,
+  gridLines: true,
 };
 
 const SETTINGS_KEY = "ocb-settings";
 const HISTORY_KEY = "ocb-run-history";
 const WORKSPACE_KEY = "ocb-workspace";
 const HISTORY_LIMIT = 25;
+/** 0-based columns where Tab stops in COBOL fixed format: Area A (col 8), Area B (col 12), col 73. */
+const COBOL_TAB_STOPS = [7, 11, 72];
 
 /** Same empty-trailing-line filter the engine uses, so prefill line counts match ACCEPT consumption. */
 function countPrefill(s: string): number {
@@ -781,18 +789,45 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Tab") {
-      event.preventDefault();
-      const ta = event.currentTarget;
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const content = activeDoc.content;
-      const indent = " ".repeat(settings.tabSize);
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    const ta = event.currentTarget;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const content = activeDoc.content;
+
+    // COBOL "smart tab": move the caret to the next coding-sheet margin column,
+    // exactly like the VS Code COBOL Language Support extension.
+    if (settings.smartTab && start === end) {
+      const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+      const col = start - lineStart;
+      if (event.shiftKey) {
+        const target = [...[0, ...COBOL_TAB_STOPS]].reverse().find((s) => s < col) ?? 0;
+        if (target >= col) return;
+        const skipped = content.slice(lineStart + target, start);
+        const pos = lineStart + target;
+        if (/^ *$/.test(skipped)) {
+          updateActive(content.slice(0, pos) + content.slice(start));
+        }
+        requestAnimationFrame(() => {
+          ta.selectionStart = ta.selectionEnd = pos;
+        });
+        return;
+      }
+      const target = COBOL_TAB_STOPS.find((s) => s > col) ?? col + settings.tabSize;
+      const indent = " ".repeat(Math.max(1, target - col));
       updateActive(`${content.slice(0, start)}${indent}${content.slice(end)}`);
       requestAnimationFrame(() => {
-        ta.selectionStart = ta.selectionEnd = start + settings.tabSize;
+        ta.selectionStart = ta.selectionEnd = start + indent.length;
       });
+      return;
     }
+
+    const indent = " ".repeat(settings.tabSize);
+    updateActive(`${content.slice(0, start)}${indent}${content.slice(end)}`);
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = start + settings.tabSize;
+    });
   };
 
   const writtenFiles = Object.entries(result?.fileOutput ?? {});
@@ -1052,6 +1087,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   ))}
                 </div>
                 <div className="relative flex-1">
+                  {settings.gridLines && !settings.wrap ? (
+                    <div className="cobol-grid" aria-hidden>
+                      {[7, 11, 72].map((c) => (
+                        <span key={c} style={{ left: 12 + c * settings.editorFont * 0.6 }} />
+                      ))}
+                    </div>
+                  ) : null}
                   <pre
                     ref={preRef}
                     aria-hidden
@@ -1353,6 +1395,24 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   type="checkbox"
                   checked={settings.autoWorkspace}
                   onChange={(e) => setSettings((s) => ({ ...s, autoWorkspace: e.target.checked }))}
+                  className="h-4 w-4 accent-indigo-500"
+                />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <span>Smart Tab - jump to COBOL margin columns (8 / 12 / 73)</span>
+                <input
+                  type="checkbox"
+                  checked={settings.smartTab}
+                  onChange={(e) => setSettings((s) => ({ ...s, smartTab: e.target.checked }))}
+                  className="h-4 w-4 accent-indigo-500"
+                />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3">
+                <span>Grid lines - Area A / Area B margin guides</span>
+                <input
+                  type="checkbox"
+                  checked={settings.gridLines}
+                  onChange={(e) => setSettings((s) => ({ ...s, gridLines: e.target.checked }))}
                   className="h-4 w-4 accent-indigo-500"
                 />
               </label>
