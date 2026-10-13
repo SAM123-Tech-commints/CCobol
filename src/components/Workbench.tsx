@@ -1272,7 +1272,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
         {/* main 2-pane area: explorer+editor | terminal */}
         <div className={paneClass}>
-          <div className={`flex min-w-0 flex-1 flex-col sm:flex-row${showEditorPane ? "" : " hidden"}`}>
+          <div className={showEditorPane ? "flex min-w-0 flex-1 flex-col sm:flex-row" : "hidden"}>
             {/* explorer */}
             <div className="shrink-0 border-b border-slate-800 bg-[#0a1422] sm:w-52 sm:border-b-0 sm:border-r">
               <div className="flex items-center justify-between px-3 pt-3 pb-1">
