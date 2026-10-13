@@ -148,6 +148,10 @@ function renderTranscript(visible: string, points: number[], echoes: string[], p
       const echo = echoes[ei];
       if (current !== "" && !current.endsWith(" ") && !echo.startsWith(" ")) current += " ";
       current += echo;
+      // Pressing Enter in a real console moves the cursor to the next line, so
+      // the typed line is echoed, then the program's following output starts on
+      // a fresh line (never glued on as "SamHELLO Sam").
+      flush();
     }
   }
   for (const ch of visible.slice(cursor)) {
@@ -658,6 +662,23 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     } catch {}
   };
 
+  /** Wipe everything this browser remembers: workspace, history and settings. */
+  const resetLocalData = () => {
+    try {
+      localStorage.removeItem(WORKSPACE_KEY);
+      localStorage.removeItem(HISTORY_KEY);
+      localStorage.removeItem(SETTINGS_KEY);
+    } catch {}
+    setHistory([]);
+    setSettings(DEFAULT_SETTINGS);
+    setDocs([{ name: "HelloWorld.cbl", content: DEFAULT_CODE, kind: "cobol" }]);
+    setActive(0);
+    setTitle("Hello, World!");
+    prefillRef.current = "";
+    setShowSettings(false);
+    resetTerminal("Cleared saved workspace, history and settings for this browser.");
+  };
+
   const save = async () => {
     setSaving(true);
     setShareUrl(null);
@@ -1105,8 +1126,23 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   // non-empty output line - no shell prompt, no blank line.
                   const waiting = awaitingInput && !running;
 
-                  // Find the anchor: the last non-empty output line. Skip any
-                  // trailing blank lines the engine's trailing newline created.
+                  // Where did the program stop printing? A trailing blank line (or
+                  // no output at all) means it ended at the start of a line - the
+                  // prompt advanced with a newline, so the cursor belongs on a fresh
+                  // line, exactly like a real console. Otherwise the prompt had no
+                  // newline (DISPLAY ... WITH NO ADVANCING) and typing continues on
+                  // that same line.
+                  let lastOutIdx = -1;
+                  for (let i = termLines.length - 1; i >= 0; i--) {
+                    if (termLines[i].kind === "out") {
+                      lastOutIdx = i;
+                      break;
+                    }
+                  }
+                  const endedAtLineStart = lastOutIdx < 0 || termLines[lastOutIdx].text.trim() === "";
+
+                  // The anchor is the last non-empty output line (trailing blanks
+                  // and the "waiting" hint stay hidden while typing).
                   let anchorIdx = -1;
                   if (waiting) {
                     for (let i = termLines.length - 1; i >= 0; i--) {
@@ -1117,7 +1153,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                     }
                   }
                   const anchor = anchorIdx >= 0 ? termLines[anchorIdx] : null;
-                  const inline = waiting && anchor?.kind === "out";
+                  const inline = waiting && anchor?.kind === "out" && !endedAtLineStart;
                   // While waiting, don't render the skipped trailing blanks.
                   const shown = waiting && anchorIdx >= 0 ? termLines.slice(0, anchorIdx + 1) : termLines;
 
@@ -1322,6 +1358,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               Settings, history and your workspace are stored only in this browser (localStorage). Shortcuts: Ctrl+Enter to
               run, Ctrl+C in the terminal to cancel program input.
             </p>
+            <button
+              type="button"
+              onClick={resetLocalData}
+              className="mt-3 w-full rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-500/10"
+            >
+              Clear saved workspace, history & settings
+            </button>
           </div>
         </div>
       ) : null}
