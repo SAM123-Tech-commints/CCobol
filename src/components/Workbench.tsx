@@ -331,10 +331,12 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       const s = localStorage.getItem(SETTINGS_KEY);
       if (s) {
         const merged = { ...DEFAULT_SETTINGS, ...(JSON.parse(s) as Partial<WorkbenchSettings>) };
-        // migrate legacy layout ids
+        // migrate legacy layout ids and fall back to the classic layout for anything unknown
+        const valid = ["side-right", "side-left", "stacked-below", "stacked-above", "editor-only", "terminal-only"];
         const lay = merged.layout as string;
         if (lay === "side") merged.layout = "side-right";
         else if (lay === "stacked") merged.layout = "stacked-below";
+        else if (!valid.includes(lay)) merged.layout = "side-right";
         setSettings(merged);
       }
       const h = localStorage.getItem(HISTORY_KEY);

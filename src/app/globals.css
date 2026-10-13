@@ -289,6 +289,186 @@ button {
   margin-top: 0.5rem;
 }
 
+/* ---- Quizlet-style flashcards ---- */
+.study-mode {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.flash-wrap {
+  margin-top: 1.5rem;
+}
+.flash {
+  outline: none;
+}
+.flash-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+.flash-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.flash-progress {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  overflow: hidden;
+}
+.flash-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #4b8fff);
+  transition: width 0.3s ease;
+}
+.flash-shuffle {
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.flash-shuffle:hover {
+  border-color: var(--accent);
+}
+.flashcard {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  perspective: 1200px;
+}
+.flashcard-inner {
+  position: relative;
+  display: block;
+  min-height: 260px;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.flashcard.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+.flashcard-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.6rem;
+  border-radius: 18px;
+  backface-visibility: hidden;
+  text-align: center;
+}
+.flashcard-front {
+  background: linear-gradient(135deg, #12233c, #16294a);
+  border: 1px solid var(--line-strong);
+  color: #f6f9fd;
+}
+.flashcard-back {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--text);
+  transform: rotateY(180deg);
+}
+.flashcard-face small {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.flashcard-front small,
+.flashcard-front em {
+  color: #9fb1c8;
+}
+.flashcard-front strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.flashcard-front em {
+  font-size: 0.72rem;
+  font-style: normal;
+}
+.flashcard-back span {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.flash-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.flash-btn {
+  flex: 1;
+  border-radius: 12px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  transition: 0.15s ease;
+}
+.flash-btn.again {
+  background: transparent;
+  color: var(--text);
+}
+.flash-btn.again:hover {
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+.flash-btn.got {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: #fff;
+  border-color: transparent;
+}
+.flash-btn.got:hover {
+  filter: brightness(1.05);
+}
+.flash-hint {
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+}
+.flash-empty {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.flash-done {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+}
+.flash-done-score {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--heading);
+}
+.flash-done p {
+  color: var(--text);
+  margin-top: 0.4rem;
+}
+.flash-done-actions {
+  margin-top: 1.2rem;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;

@@ -2,19 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Quiz from "@/components/Quiz";
+import Flashcards from "@/components/Flashcards";
 import { quizzes } from "@/content/quizzes";
+import { bankFor } from "@/content/quizbank";
 import { getQuizBest } from "@/lib/progress";
 
-/** Quiz study room — template hero + study controls, wrapping the quiz engine. */
+/** Quiz study room — Quizlet-style: flip flashcards OR take the quiz, both built
+ *  from the lesson's key terms and questions. */
 export default function QuizBrowser({ slugs, initial }: { slugs: string[]; initial: string }) {
   // School lessons first, then the tutorial quizzes.
   const ordered = [...slugs].sort((a, b) => (a.startsWith("school-") ? 0 : 1) - (b.startsWith("school-") ? 0 : 1));
   const [slug, setSlug] = useState(initial);
   const [best, setBest] = useState<number | null>(null);
+  const [mode, setMode] = useState<"quiz" | "flash">("flash");
 
   useEffect(() => {
     setBest(getQuizBest()[slug] ?? null);
   }, [slug]);
+
+  const terms = bankFor(slug)?.terms ?? [];
 
   return (
     <>
@@ -23,8 +29,8 @@ export default function QuizBrowser({ slugs, initial }: { slugs: string[]; initi
           <p className="pill">Study room</p>
           <h1>Practice until it sticks.</h1>
           <p className="lead">
-            Flashcards, multiple choice, identification with letter hints, matching, true or false, enumeration and a
-            mixed mode - with instant feedback on every answer.
+            Flip flashcards like Quizlet, then take the quiz — multiple choice, identification, matching, true or false,
+            enumeration and mixed, with instant feedback on every answer.
           </p>
         </div>
         <div className="quiz-hero-stat">
@@ -48,11 +54,25 @@ export default function QuizBrowser({ slugs, initial }: { slugs: string[]; initi
             ))}
           </select>
         </label>
+        <div className="study-mode" role="tablist" aria-label="Study mode">
+          <button type="button" role="tab" aria-selected={mode === "flash"} className={mode === "flash" ? "chip on" : "chip"} onClick={() => setMode("flash")}>
+            Flashcards{terms.length ? ` (${terms.length})` : ""}
+          </button>
+          <button type="button" role="tab" aria-selected={mode === "quiz"} className={mode === "quiz" ? "chip on" : "chip"} onClick={() => setMode("quiz")}>
+            Quiz
+          </button>
+        </div>
       </section>
 
-      <div key={slug}>
-        <Quiz slug={slug} />
-      </div>
+      {mode === "flash" ? (
+        <div key={`flash-${slug}`} className="flash-wrap">
+          <Flashcards terms={terms} title={quizzes[slug]?.title ?? slug} />
+        </div>
+      ) : (
+        <div key={slug}>
+          <Quiz slug={slug} />
+        </div>
+      )}
     </>
   );
 }
