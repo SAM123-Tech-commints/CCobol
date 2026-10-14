@@ -6,7 +6,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import SearchDialog from "@/components/SearchDialog";
 import { BookIcon, CodeIcon, GraduationCapIcon, LayersIcon, MenuIcon, QuizIcon, SearchIcon, TerminalIcon, XIcon } from "@/components/icons";
 
-type NavId = "tutorials" | "school" | "exercises" | "quiz" | "cheatsheet" | "wiki" | "compiler";
+type NavId = "tutorials" | "school" | "exercises" | "quiz" | "cheatsheet" | "compiler";
 
 const LINKS: { id: NavId; href: string; label: string; Icon: typeof BookIcon }[] = [
   { id: "tutorials", href: "/", label: "Tutorials", Icon: BookIcon },
@@ -14,7 +14,6 @@ const LINKS: { id: NavId; href: string; label: string; Icon: typeof BookIcon }[]
   { id: "exercises", href: "/exercises", label: "Exercises", Icon: CodeIcon },
   { id: "quiz", href: "/quiz", label: "Quizzes", Icon: QuizIcon },
   { id: "cheatsheet", href: "/cheatsheet", label: "Cheat Sheet", Icon: LayersIcon },
-  { id: "wiki", href: "/wiki", label: "Wiki", Icon: BookIcon },
 ];
 
 /** Template brand mark (gradient C). */
