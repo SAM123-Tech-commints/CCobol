@@ -90,6 +90,7 @@ html[data-theme="light"] {
 body {
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
   font-family: var(--font-sans);
   color: var(--text);
   background:
@@ -885,6 +886,9 @@ button {
   color: var(--heading);
 }
 .menu-button {
+  display: none;
+}
+.nav-compiler-mobile {
   display: none;
 }
 .cta {
@@ -2406,8 +2410,30 @@ button {
   .main-nav a {
     height: 42px;
   }
+  .main-nav {
+    width: min(240px, calc(100vw - 32px));
+  }
   .menu-button {
     display: grid;
+  }
+  .nav-compiler-mobile {
+    display: flex;
+  }
+}
+@media (max-width: 600px) {
+  .header-actions .cta {
+    display: none;
+  }
+  .topbar {
+    gap: 8px;
+  }
+  .brand {
+    min-width: 0;
+  }
+  .brand-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 @media (max-width: 760px) {

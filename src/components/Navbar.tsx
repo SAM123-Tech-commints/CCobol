@@ -67,6 +67,10 @@ export default function Navbar({ active }: { active?: NavId }) {
             {label}
           </Link>
         ))}
+        <Link href="/compiler" className={`nav-compiler-mobile${active === "compiler" ? " active" : ""}`} onClick={() => setOpen(false)}>
+          <TerminalIcon width={16} height={16} />
+          Compiler
+        </Link>
       </nav>
 
       <div className="header-actions">

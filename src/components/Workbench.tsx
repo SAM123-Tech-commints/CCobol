@@ -21,6 +21,7 @@ import {
   XIcon,
 } from "@/components/icons";
 import AiPanel from "@/components/AiPanel";
+import { startCollab, colorFor, type CollabController, type Peer } from "@/lib/collab";
 
 export interface WorkbenchExample {
   id: string;
@@ -161,6 +162,41 @@ const HISTORY_LIMIT = 25;
 /** 0-based columns where Tab stops in COBOL fixed format: Area A (col 8), Area B (col 12), col 73. */
 const COBOL_TAB_STOPS = [7, 11, 72];
 
+/** Animal identities for collaborators (emoji "photos" + a name). */
+const ANIMALS: { name: string; emoji: string }[] = [
+  { name: "Fox", emoji: "🦊" },
+  { name: "Panda", emoji: "🐼" },
+  { name: "Lion", emoji: "🦁" },
+  { name: "Koala", emoji: "🐨" },
+  { name: "Tiger", emoji: "🐯" },
+  { name: "Penguin", emoji: "🐧" },
+  { name: "Owl", emoji: "🦉" },
+  { name: "Frog", emoji: "🐸" },
+  { name: "Octopus", emoji: "🐙" },
+  { name: "Cat", emoji: "🐱" },
+  { name: "Dog", emoji: "🐶" },
+  { name: "Unicorn", emoji: "🦄" },
+];
+const USER_KEY = "ocb-user";
+
+interface Identity {
+  name: string;
+  emoji: string;
+  color: string;
+}
+
+function loadIdentity(): Identity {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<Identity>;
+      if (p.name && p.emoji) return { name: p.name, emoji: p.emoji, color: p.color ?? colorFor(Math.floor(Math.random() * 8)) };
+    }
+  } catch {}
+  const a = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  return { name: a.name, emoji: a.emoji, color: colorFor(Math.floor(Math.random() * 8)) };
+}
+
 /** Same empty-trailing-line filter the engine uses, so prefill line counts match ACCEPT consumption. */
 function countPrefill(s: string): number {
   if (!s) return 0;
@@ -261,6 +297,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [showShare, setShowShare] = useState(false);
   const [shareRoleState, setShareRoleState] = useState<"editor" | "commenter" | "viewer">("editor");
   const [cursor, setCursor] = useState({ ln: 1, col: 1 });
+  const [collabOn, setCollabOn] = useState(false);
+  const [room, setRoom] = useState("");
+  const [peers, setPeers] = useState<Peer[]>([]);
+  const [me, setMe] = useState<Identity>({ name: "Fox", emoji: "🦊", color: "#2563eb" });
+  const collabRef = useRef<CollabController | null>(null);
   const [sug, setSug] = useState<{ items: string[]; index: number; left: number; top: number; from: number } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -425,6 +466,54 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     }, 800);
     return () => clearTimeout(t);
   }, [docs, title, active, settings.autoWorkspace]);
+
+  // Load the collaborator identity and join a room from the URL (?room=).
+  useEffect(() => {
+    const id = loadIdentity();
+    setMe(id);
+    try {
+      localStorage.setItem(USER_KEY, JSON.stringify(id));
+    } catch {}
+    const r = new URLSearchParams(window.location.search).get("room");
+    if (r) {
+      setRoom(r);
+      setCollabOn(true);
+    }
+  }, []);
+
+  // Start / stop the real-time collaboration session.
+  useEffect(() => {
+    if (!collabOn || !room) return;
+    let cancelled = false;
+    void startCollab({
+      room,
+      initialText: activeDoc.content,
+      user: { name: `${me.emoji} ${me.name}`, color: me.color },
+      onChange: (text) => updateActive(text),
+      onPeers: (p) => setPeers(p),
+    }).then((c) => {
+      if (cancelled) {
+        c.destroy();
+        return;
+      }
+      collabRef.current = c;
+    });
+    return () => {
+      cancelled = true;
+      collabRef.current?.destroy();
+      collabRef.current = null;
+      setPeers([]);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collabOn, room]);
+
+  // Advertise the current name / colour to peers.
+  useEffect(() => {
+    collabRef.current?.setLocalUser({ name: `${me.emoji} ${me.name}`, color: me.color });
+    try {
+      localStorage.setItem(USER_KEY, JSON.stringify(me));
+    } catch {}
+  }, [me]);
 
   /** Execute the compiled program. fresh=true restarts it; every round re-renders the
    *  whole transcript deterministically from the engine's output (echoes merged onto the
@@ -795,7 +884,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const buildShareUrl = (role: string) => {
     const payload = { code: combinedCode, stdin: stdinAccRef.current, files: dataFiles, title };
     const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    return `${window.location.origin}/compiler?code=${encodeURIComponent(b64)}&role=${role}`;
+    return `${window.location.origin}/compiler?code=${encodeURIComponent(b64)}&role=${role}${room ? `&room=${encodeURIComponent(room)}` : ""}`;
   };
   const openShare = () => {
     setShareRoleState("editor");
@@ -805,6 +894,16 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const changeShareRole = (r: "editor" | "commenter" | "viewer") => {
     setShareRoleState(r);
     setShareUrl(buildShareUrl(r));
+  };
+  /** Toggle a free peer-to-peer real-time session (Yjs + y-webrtc). */
+  const goLive = () => {
+    if (collabOn) {
+      setCollabOn(false);
+      setRoom("");
+    } else {
+      setRoom(room || Math.random().toString(36).slice(2, 8));
+      setCollabOn(true);
+    }
   };
   const copyShare = async () => {
     const url = shareUrl ?? buildShareUrl(shareRoleState);
@@ -1241,7 +1340,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.cobol,.cpy,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
-      <div className={`doc-dark edtheme-${settings.editorTheme} wb-themed overflow-hidden rounded-xl border border-slate-700 shadow-2xl`}>
+      <div className={`edtheme-${settings.editorTheme} wb-themed overflow-hidden rounded-xl border border-slate-700 shadow-2xl`}>
         {/* top toolbar */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 wb-chrome px-3 py-2">
           <span className="mr-1 hidden items-center gap-1.5 sm:flex">
@@ -1305,6 +1404,37 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           >
             Share
           </button>
+          <button
+            type="button"
+            onClick={goLive}
+            title={collabOn ? "Stop the live session" : "Go live - real-time collaboration (free, peer-to-peer)"}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+              collabOn ? "border-emerald-400 text-emerald-200" : "border-slate-600 text-slate-200 hover:border-emerald-400 hover:text-white"
+            }`}
+          >
+            <span className={`inline-block h-2 w-2 rounded-full ${collabOn ? "bg-emerald-400" : "bg-slate-500"}`} />
+            {collabOn ? `Live (${peers.length})` : "Collaborate"}
+          </button>
+          {collabOn && peers.length ? (
+            <div className="flex items-center -space-x-2" aria-label="People in this session">
+              {peers.slice(0, 6).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    if (!p.self) return;
+                    const n = window.prompt("Your display name", me.name);
+                    if (n) setMe((m) => ({ ...m, name: n.trim().slice(0, 20) || m.name }));
+                  }}
+                  title={`${p.name}${p.self ? " (you - click to rename)" : ""}`}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border-2 bg-[#0b1625] text-sm"
+                  style={{ borderColor: p.color }}
+                >
+                  {p.name.split(" ")[0]}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="relative">
             <button
               type="button"
@@ -1582,6 +1712,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                     onChange={(e) => {
                       setSug(null);
                       updateActive(e.target.value);
+                      collabRef.current?.setLocalText(e.target.value);
                       computeSuggestions(e.target.value, e.target.selectionStart, false);
                     }}
                     onScroll={() => {
