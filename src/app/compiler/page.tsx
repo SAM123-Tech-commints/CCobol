@@ -14,7 +14,7 @@ export const metadata = {
 };
 
 interface CompilerPageProps {
-  searchParams: Promise<{ code?: string; example?: string; share?: string }>;
+  searchParams: Promise<{ code?: string; example?: string; share?: string; role?: string }>;
 }
 
 function decodePayload(raw: string): { code: string; stdin: string; files: Record<string, string>; title: string } | null {
@@ -108,6 +108,7 @@ export default async function CompilerPage({ searchParams }: CompilerPageProps) 
           initialStdin={stdin}
           initialFiles={files}
           initialTitle={title}
+          shareRole={params.role}
         />
 
         <section className="trust-row" aria-label="Platform highlights">

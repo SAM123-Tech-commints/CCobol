@@ -2384,17 +2384,13 @@ button {
     border: 0;
   }
 }
-@media (max-width: 760px) {
-  .topbar {
-    height: 60px;
-    padding: 0 16px;
-  }
+@media (max-width: 1024px) {
   .main-nav {
     position: absolute;
-    top: 59px;
+    top: 67px;
     right: 16px;
     display: none;
-    width: 200px;
+    width: 220px;
     height: auto;
     align-items: stretch;
     flex-direction: column;
@@ -2412,6 +2408,12 @@ button {
   }
   .menu-button {
     display: grid;
+  }
+}
+@media (max-width: 760px) {
+  .topbar {
+    height: 60px;
+    padding: 0 16px;
   }
   .page {
     padding: 28px 14px 48px;

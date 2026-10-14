@@ -49,6 +49,8 @@ interface Props {
   initialStdin: string;
   initialFiles: Record<string, string>;
   initialTitle: string;
+  /** Access role from a shared link: editor (default), commenter or viewer. */
+  shareRole?: string;
 }
 
 const DEFAULT_CODE = `       IDENTIFICATION DIVISION.
@@ -229,7 +231,7 @@ function uniqueName(docs: DocFile[], base: string): string {
 }
 
 /** VS Code-style IDE: explorer (rename/upload/download) + editor tabs + real shell terminal. COBOL only. */
-export default function Workbench({ examples, initialCode, initialStdin, initialFiles, initialTitle }: Props) {
+export default function Workbench({ examples, initialCode, initialStdin, initialFiles, initialTitle, shareRole }: Props) {
   const [docs, setDocs] = useState<DocFile[]>(() => [
     { name: "HelloWorld.cbl", content: initialCode || DEFAULT_CODE, kind: "cobol" },
     ...Object.entries(initialFiles ?? {}).map(([name, content]) => ({ name, content, kind: kindOf(name) as "cobol" | "data" })),
@@ -256,6 +258,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [replText, setReplText] = useState("");
   const [panelTab, setPanelTab] = useState<"terminal" | "output">("terminal");
   const [outputText, setOutputText] = useState("");
+  const [showShare, setShowShare] = useState(false);
+  const [shareRoleState, setShareRoleState] = useState<"editor" | "commenter" | "viewer">("editor");
+  const [cursor, setCursor] = useState({ ln: 1, col: 1 });
   const [sug, setSug] = useState<{ items: string[]; index: number; left: number; top: number; from: number } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -293,6 +298,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
 
   const safeActive = Math.min(active, docs.length - 1);
   const activeDoc = docs[safeActive];
+  const readOnly = shareRole === "viewer" || shareRole === "commenter";
 
   /** Snapshot the current program into local run history. */
   const rememberRun = useCallback(
@@ -323,6 +329,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     [activeDoc],
   );
   const lineCount = useMemo(() => activeDoc.content.split("\n").length, [activeDoc]);
+  const byteCount = useMemo(() => {
+    try {
+      return new TextEncoder().encode(activeDoc.content).length;
+    } catch {
+      return activeDoc.content.length;
+    }
+  }, [activeDoc]);
 
   const cobolDocs = useMemo(() => docs.filter((d) => d.kind === "cobol"), [docs]);
   const combinedCode = useMemo(() => cobolDocs.map((d) => d.content).join("\n"), [cobolDocs]);
@@ -778,12 +791,23 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     resetTerminal("Workspace reset - starting from a fresh Hello World.");
   };
 
-  /** Share = a self-contained link (no database needed): the whole program,
-   *  stdin and files are encoded into the ?code= parameter. */
-  const share = async () => {
+  /** Build a self-contained share link (no database needed) with an access role. */
+  const buildShareUrl = (role: string) => {
     const payload = { code: combinedCode, stdin: stdinAccRef.current, files: dataFiles, title };
     const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    const url = `${window.location.origin}/compiler?code=${encodeURIComponent(b64)}`;
+    return `${window.location.origin}/compiler?code=${encodeURIComponent(b64)}&role=${role}`;
+  };
+  const openShare = () => {
+    setShareRoleState("editor");
+    setShareUrl(buildShareUrl("editor"));
+    setShowShare(true);
+  };
+  const changeShareRole = (r: "editor" | "commenter" | "viewer") => {
+    setShareRoleState(r);
+    setShareUrl(buildShareUrl(r));
+  };
+  const copyShare = async () => {
+    const url = shareUrl ?? buildShareUrl(shareRoleState);
     setShareUrl(url);
     try {
       await navigator.clipboard.writeText(url);
@@ -1239,6 +1263,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </button>
           <span className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white">Cobol</span>
           <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-300">COBOL ONLY</span>
+          {readOnly ? (
+            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-300">
+              {shareRole === "viewer" ? "VIEW ONLY" : "COMMENTER"}
+            </span>
+          ) : null}
           <select
             onChange={(e) => loadExample(e.target.value)}
             defaultValue=""
@@ -1270,8 +1299,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </button>
           <button
             type="button"
-            onClick={share}
-            title="Create a share link and copy it to the clipboard (works without a database)"
+            onClick={openShare}
+            title="Share this program with a link and an access role"
             className="rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-400 hover:text-white"
           >
             Share
@@ -1511,7 +1540,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                     type="button"
                     onClick={() => setActive(idx)}
                     className={`flex shrink-0 items-center gap-1.5 rounded-t-md px-3 py-1.5 font-mono text-xs transition ${
-                      idx === safeActive ? "wb-bg font-semibold text-white" : "text-slate-500 hover:bg-slate-800/50 hover:text-slate-300"
+                      idx === safeActive ? "wb-bg font-semibold text-slate-100" : "text-slate-500 hover:bg-slate-800/50 hover:text-slate-300"
                     }`}
                   >
                     {doc.name}
@@ -1566,7 +1595,13 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                         computeSuggestions(activeDoc.content, e.currentTarget.selectionStart, false);
                       }
                     }}
+                    onSelect={(e) => {
+                      const ta = e.currentTarget;
+                      const before = ta.value.slice(0, ta.selectionStart);
+                      setCursor({ ln: before.split("\n").length, col: ta.selectionStart - before.lastIndexOf("\n") });
+                    }}
                     spellCheck={false}
+                    readOnly={readOnly}
                     wrap={settings.wrap ? "soft" : "off"}
                     className={`relative h-full min-h-[380px] w-full resize-none overflow-auto bg-transparent px-3 py-3 font-mono text-transparent caret-emerald-300 outline-none selection:bg-indigo-500/40 ${
                       settings.wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
@@ -1807,7 +1842,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           <span className={running ? "text-amber-400" : "text-emerald-400"}>● {running ? "Running" : "Ready"}</span>
           <span className="truncate">{activeDoc.name}</span>
           <span className="ml-auto shrink-0">
-            {lineCount} lines · COBOL{result ? ` · ${result.runMs} ms` : ""}
+            Ln {cursor.ln}, Col {cursor.col} · {lineCount} lines · {byteCount} bytes · COBOL{result ? ` · ${result.runMs} ms` : ""}
           </span>
         </div>
       </div>
@@ -1984,6 +2019,55 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             >
               Clear saved workspace, history & settings
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showShare ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowShare(false)}>
+          <div className="w-full max-w-md rounded-xl border border-slate-600 bg-[#0b1625] p-4 text-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <p className="font-bold text-white">Share this program</p>
+              <button type="button" onClick={() => setShowShare(false)} className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white">
+                <XIcon width={14} height={14} />
+              </button>
+            </div>
+            <p className="mb-2 text-xs text-slate-400">Anyone with the link can:</p>
+            <div className="mb-3 flex gap-2">
+              {(["viewer", "commenter", "editor"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => changeShareRole(r)}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold capitalize transition ${
+                    shareRoleState === r ? "border-indigo-400 bg-indigo-500/15 text-white" : "border-slate-600 text-slate-300 hover:border-indigo-400"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <p className="mb-1 text-[11px] text-slate-500">
+              {shareRoleState === "editor"
+                ? "Can open, run and edit the program."
+                : shareRoleState === "commenter"
+                  ? "Can open and run it, and add comments (editing is locked)."
+                  : "Can open and run it, read-only."}
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                readOnly
+                value={shareUrl ?? ""}
+                className="min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 font-mono text-[11px] text-slate-200 outline-none"
+              />
+              <button type="button" onClick={copyShare} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">
+                Copy link
+              </button>
+            </div>
+            <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+              The link carries the whole program (code, inputs and files) - no account or database needed. Live multi-user
+              editing needs a collaboration server, but the link opens the exact project for everyone.
+            </p>
           </div>
         </div>
       ) : null}
