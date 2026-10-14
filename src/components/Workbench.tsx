@@ -21,7 +21,9 @@ import {
   XIcon,
 } from "@/components/icons";
 import AiPanel from "@/components/AiPanel";
-import { startCollab, colorFor, type CollabController, type Peer } from "@/lib/collab";
+import AuthModal from "@/components/AuthModal";
+import { startCollab, colorFor, type CollabController, type Comment, type Peer } from "@/lib/collab";
+import { supabase, collabConfigured, type Session } from "@/lib/supabase";
 
 export interface WorkbenchExample {
   id: string;
@@ -197,6 +199,19 @@ function loadIdentity(): Identity {
   return { name: a.name, emoji: a.emoji, color: colorFor(Math.floor(Math.random() * 8)) };
 }
 
+/** Identity from the signed-in account: name + a stable animal avatar. */
+function identityFromSession(session: Session): Identity {
+  const user = session.user;
+  const meta = (user.user_metadata ?? {}) as { display_name?: string };
+  let name = meta.display_name || (user.email ?? "coder").split("@")[0];
+  try {
+    const stored = localStorage.getItem("ocb-display-name");
+    if (stored) name = stored;
+  } catch {}
+  const a = ANIMALS[user.id.split("").reduce((x, c) => x + c.charCodeAt(0), 0) % ANIMALS.length];
+  return { name: name.slice(0, 20), emoji: a.emoji, color: colorFor(user.id) };
+}
+
 /** Same empty-trailing-line filter the engine uses, so prefill line counts match ACCEPT consumption. */
 function countPrefill(s: string): number {
   if (!s) return 0;
@@ -292,7 +307,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [searchOpen, setSearchOpen] = useState(false);
   const [findText, setFindText] = useState("");
   const [replText, setReplText] = useState("");
-  const [panelTab, setPanelTab] = useState<"terminal" | "output">("terminal");
+  const [panelTab, setPanelTab] = useState<"terminal" | "output" | "comments">("terminal");
   const [outputText, setOutputText] = useState("");
   const [showShare, setShowShare] = useState(false);
   const [shareRoleState, setShareRoleState] = useState<"editor" | "commenter" | "viewer">("editor");
@@ -302,6 +317,11 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [peers, setPeers] = useState<Peer[]>([]);
   const [me, setMe] = useState<Identity>({ name: "Fox", emoji: "🦊", color: "#2563eb" });
   const collabRef = useRef<CollabController | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentDraft, setCommentDraft] = useState("");
   const [sug, setSug] = useState<{ items: string[]; index: number; left: number; top: number; from: number } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -467,53 +487,74 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     return () => clearTimeout(t);
   }, [docs, title, active, settings.autoWorkspace]);
 
-  // Load the collaborator identity and join a room from the URL (?room=).
+  // Restore the account session (Supabase auth) and keep it in sync.
   useEffect(() => {
-    const id = loadIdentity();
-    setMe(id);
-    try {
-      localStorage.setItem(USER_KEY, JSON.stringify(id));
-    } catch {}
-    const r = new URLSearchParams(window.location.search).get("room");
-    if (r) {
-      setRoom(r);
-      setCollabOn(true);
-    }
+    if (!supabase) return;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setSession(data.session);
+        setMe(identityFromSession(data.session));
+      }
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s) setMe(identityFromSession(s));
+    });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Start / stop the real-time collaboration session.
+  // Join a live room from the URL (?room=) - sign-in required, like Google Docs.
   useEffect(() => {
-    if (!collabOn || !room) return;
+    const r = new URLSearchParams(window.location.search).get("room");
+    if (!r) return;
+    setRoom(r);
+    if (!supabase) return;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setCollabOn(true);
+      else setShowAuth(true);
+    });
+  }, []);
+
+  // Start / stop the real-time session (requires a signed-in account).
+  useEffect(() => {
+    if (!collabOn || !room || !session) return;
     let cancelled = false;
     void startCollab({
       room,
       initialText: activeDoc.content,
-      user: { name: `${me.emoji} ${me.name}`, color: me.color },
+      user: { id: session.user.id, name: me.name, emoji: me.emoji, color: me.color },
       onChange: (text) => updateActive(text),
       onPeers: (p) => setPeers(p),
-    }).then((c) => {
-      if (cancelled) {
-        c.destroy();
-        return;
-      }
-      collabRef.current = c;
-    });
+      onComments: (list) => setComments(list),
+      onComment: (c) => setComments((prev) => (prev.some((x) => x.id === c.id) ? prev : [...prev, c])),
+    })
+      .then((c) => {
+        if (cancelled) {
+          c.destroy();
+          return;
+        }
+        collabRef.current = c;
+      })
+      .catch(() => {
+        setCollabOn(false);
+      });
     return () => {
       cancelled = true;
       collabRef.current?.destroy();
       collabRef.current = null;
       setPeers([]);
+      setComments([]);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collabOn, room]);
+  }, [collabOn, room, session?.user?.id]);
 
   // Advertise the current name / colour to peers.
   useEffect(() => {
-    collabRef.current?.setLocalUser({ name: `${me.emoji} ${me.name}`, color: me.color });
+    collabRef.current?.setLocalUser({ id: session?.user.id ?? "", name: me.name, emoji: me.emoji, color: me.color });
     try {
       localStorage.setItem(USER_KEY, JSON.stringify(me));
     } catch {}
-  }, [me]);
+  }, [me, session]);
 
   /** Execute the compiled program. fresh=true restarts it; every round re-renders the
    *  whole transcript deterministically from the engine's output (echoes merged onto the
@@ -895,15 +936,32 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     setShareRoleState(r);
     setShareUrl(buildShareUrl(r));
   };
-  /** Toggle a free peer-to-peer real-time session (Yjs + y-webrtc). */
+  /** Go live, Google-Docs style: requires a free account + Supabase keys. */
   const goLive = () => {
     if (collabOn) {
       setCollabOn(false);
       setRoom("");
-    } else {
-      setRoom(room || Math.random().toString(36).slice(2, 8));
-      setCollabOn(true);
+      return;
     }
+    if (!collabConfigured) {
+      print([
+        { kind: "sys", text: "collaboration needs free Supabase keys - add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (see .env.example)" },
+      ]);
+      return;
+    }
+    if (!session) {
+      setShowAuth(true);
+      return;
+    }
+    setRoom(room || Math.random().toString(36).slice(2, 8));
+    setCollabOn(true);
+  };
+
+  const handleSignedIn = (s: Session) => {
+    setSession(s);
+    setMe(identityFromSession(s));
+    if (!room) setRoom(Math.random().toString(36).slice(2, 8));
+    setCollabOn(true);
   };
   const copyShare = async () => {
     const url = shareUrl ?? buildShareUrl(shareRoleState);
@@ -1387,17 +1445,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           />
           <button
             type="button"
-            onClick={save}
-            disabled={saving}
-            className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-indigo-400 hover:text-white disabled:opacity-50"
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <SaveIcon width={12} height={12} />
-              {saving ? "Saving…" : "Save"}
-            </span>
-          </button>
-          <button
-            type="button"
             onClick={openShare}
             title="Share this program with a link and an access role"
             className="rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-400 hover:text-white"
@@ -1407,7 +1454,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           <button
             type="button"
             onClick={goLive}
-            title={collabOn ? "Stop the live session" : "Go live - real-time collaboration (free, peer-to-peer)"}
+            title={collabOn ? "Stop the live session" : "Go live - real-time collaboration with accounts (free Supabase)"}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
               collabOn ? "border-emerald-400 text-emerald-200" : "border-slate-600 text-slate-200 hover:border-emerald-400 hover:text-white"
             }`}
@@ -1424,13 +1471,21 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   onClick={() => {
                     if (!p.self) return;
                     const n = window.prompt("Your display name", me.name);
-                    if (n) setMe((m) => ({ ...m, name: n.trim().slice(0, 20) || m.name }));
+                    if (n) {
+                      const clean = n.trim().slice(0, 20);
+                      if (clean) {
+                        setMe((m) => ({ ...m, name: clean }));
+                        try {
+                          localStorage.setItem("ocb-display-name", clean);
+                        } catch {}
+                      }
+                    }
                   }}
-                  title={`${p.name}${p.self ? " (you - click to rename)" : ""}`}
+                  title={`${p.emoji} ${p.name}${p.self ? " (you - click to rename)" : ""}`}
                   className="flex h-7 w-7 items-center justify-center rounded-full border-2 bg-[#0b1625] text-sm"
                   style={{ borderColor: p.color }}
                 >
-                  {p.name.split(" ")[0]}
+                  {p.emoji}
                 </button>
               ))}
             </div>
@@ -1439,17 +1494,79 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
             <button
               type="button"
               onClick={() => {
-                setShowHistory((v) => !v);
+                setShowMenu((v) => !v);
                 setShowSettings(false);
               }}
-              title="Local run history (saved in this browser)"
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                showHistory ? "border-indigo-400 text-white" : "border-slate-600 text-slate-200 hover:border-indigo-400 hover:text-white"
+              title="More: save, run history, settings, account"
+              className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold transition ${
+                showMenu || showHistory ? "border-indigo-400 text-white" : "border-slate-600 text-slate-200 hover:border-indigo-400 hover:text-white"
               }`}
             >
-              <ClockIcon width={12} height={12} />
-              History{history.length ? ` (${history.length})` : ""}
+              ⋯
             </button>
+            {showMenu ? (
+              <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-slate-600 wb-chrome p-1.5 shadow-2xl">
+                {session ? (
+                  <p className="px-3 py-1.5 text-[11px] text-slate-400">
+                    Signed in as <strong className="text-slate-200">{session.user.email}</strong>
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMenu(false);
+                    void save();
+                  }}
+                  className="w-full rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+                >
+                  Save & share link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowHistory((v) => !v);
+                    setShowMenu(false);
+                  }}
+                  className="w-full rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+                >
+                  Run history{history.length ? ` (${history.length})` : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSettings(true);
+                    setShowMenu(false);
+                  }}
+                  className="w-full rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:bg-slate-700"
+                >
+                  Settings
+                </button>
+                {session ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void supabase?.auth.signOut();
+                      setCollabOn(false);
+                      setShowMenu(false);
+                    }}
+                    className="w-full rounded-md px-3 py-2 text-left text-xs font-semibold text-rose-300 transition hover:bg-slate-700"
+                  >
+                    Sign out
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowAuth(true);
+                    }}
+                    className="w-full rounded-md px-3 py-2 text-left text-xs font-semibold text-indigo-300 transition hover:bg-slate-700"
+                  >
+                    Sign in to collaborate
+                  </button>
+                )}
+              </div>
+            ) : null}
             {showHistory ? (
               <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-80 overflow-auto rounded-lg border border-slate-600 wb-chrome p-2 shadow-2xl">
                 <div className="flex items-center justify-between px-1 pb-1">
@@ -1491,20 +1608,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               </div>
             ) : null}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setShowSettings((v) => !v);
-              setShowHistory(false);
-            }}
-            title="Compiler settings"
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-              showSettings ? "border-indigo-400 text-white" : "border-slate-600 text-slate-200 hover:border-indigo-400 hover:text-white"
-            }`}
-          >
-            <GearIcon width={12} height={12} />
-            Settings
-          </button>
         </div>
 
         {/* main 2-pane area: explorer+editor | terminal */}
@@ -1765,7 +1868,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           <div className={termClass}>
             <div className="flex items-center gap-2 border-b border-slate-800 wb-chrome px-3 py-1.5">
               <div className="flex gap-1">
-                {(["terminal", "output"] as const).map((t) => (
+                {(["terminal", "output", "comments"] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -1775,6 +1878,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                     }`}
                   >
                     {t}
+                    {t === "comments" && comments.length ? ` (${comments.length})` : ""}
                   </button>
                 ))}
               </div>
@@ -1943,7 +2047,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                 <div ref={termEndRef} />
               </div>
             </div>
-            ) : (
+            ) : panelTab === "output" ? (
               <div className="flex max-h-[480px] min-h-[260px] flex-1 flex-col overflow-hidden">
                 <div className="flex items-center justify-between border-b border-slate-800 px-3 py-1.5">
                   <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Program output (read-only)</span>
@@ -1961,6 +2065,54 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                     {outputText || "(no output yet - press Run, then Refresh)"}
                   </pre>
                 </div>
+              </div>
+            ) : (
+              <div className="flex max-h-[480px] min-h-[260px] flex-1 flex-col overflow-hidden">
+                <div className="flex-1 space-y-2 overflow-auto p-3">
+                  {comments.length === 0 ? (
+                    <p className="text-xs text-slate-500">
+                      No comments yet. Go live and leave feedback for your collaborators - everyone in the room sees it
+                      instantly.
+                    </p>
+                  ) : (
+                    comments.map((c) => (
+                      <div key={c.id} className="rounded-lg border border-slate-700 bg-[#091524] p-2">
+                        <p className="mb-1 flex items-center gap-1.5 text-[11px] font-bold" style={{ color: c.color }}>
+                          <span>{c.emoji}</span> {c.name}
+                          <span className="font-mono text-[9px] font-normal text-slate-500">
+                            {new Date(c.created_at).toLocaleTimeString()}
+                          </span>
+                        </p>
+                        <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-200">{c.body}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const body = commentDraft.trim();
+                    if (!body || !collabRef.current) return;
+                    void collabRef.current.addComment(body);
+                    setCommentDraft("");
+                  }}
+                  className="flex gap-2 border-t border-slate-800 p-2"
+                >
+                  <input
+                    value={commentDraft}
+                    onChange={(e) => setCommentDraft(e.target.value)}
+                    disabled={!collabOn}
+                    placeholder={collabOn ? "Add a comment for the team…" : "Go live to comment"}
+                    className="min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus:border-indigo-400 disabled:opacity-60"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!collabOn || !commentDraft.trim()}
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    Send
+                  </button>
+                </form>
               </div>
             )}
           </div>
@@ -2202,6 +2354,8 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </div>
         </div>
       ) : null}
+
+      <AuthModal open={showAuth} onClose={() => setShowAuth(false)} onSignedIn={handleSignedIn} />
 
       {result && result.errors.length ? (
         <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3">
