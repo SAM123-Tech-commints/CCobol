@@ -101,6 +101,8 @@ export interface WorkbenchSettings {
   gridLines: boolean;
   /** Word suggestions while typing (COBOL keywords, variables, paragraphs). */
   autocomplete: boolean;
+  /** Compiler colour theme (affects the editor/terminal/explorer only, not settings). */
+  editorTheme: string;
   /** Terminal placement: side-by-side (right) or stacked (below). */
   layout: "side-right" | "side-left" | "stacked-below" | "stacked-above" | "editor-only" | "terminal-only";
   /** Terminal width on large screens. */
@@ -117,9 +119,28 @@ const DEFAULT_SETTINGS: WorkbenchSettings = {
   smartTab: true,
   gridLines: false,
   autocomplete: true,
+  editorTheme: "cobol",
   layout: "side-right",
   termWidth: "medium",
 };
+
+/** Compiler colour themes (editor + terminal + explorer + chrome). */
+const EDITOR_THEMES: { id: string; label: string }[] = [
+  { id: "cobol", label: "COBOL Studio (default)" },
+  { id: "vscode-dark", label: "Dark+ (Visual Studio)" },
+  { id: "high-contrast-dark", label: "High Contrast Dark" },
+  { id: "monokai", label: "Monokai" },
+  { id: "dracula", label: "Dracula" },
+  { id: "night-owl", label: "Night Owl" },
+  { id: "light", label: "Light (Visual Studio)" },
+  { id: "one-light", label: "One Light" },
+  { id: "github-light", label: "GitHub Light" },
+  { id: "solarized-light", label: "Solarized Light" },
+  { id: "catppuccin-latte", label: "Catppuccin Latte" },
+  { id: "min-light", label: "Min Light" },
+  { id: "vitesse-light", label: "Vitesse Light" },
+  { id: "high-contrast-light", label: "High Contrast Light" },
+];
 
 /** Layout choices shown in Settings. */
 const LAYOUTS: { id: WorkbenchSettings["layout"]; label: string }[] = [
@@ -234,7 +255,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const [findText, setFindText] = useState("");
   const [replText, setReplText] = useState("");
   const [panelTab, setPanelTab] = useState<"terminal" | "output">("terminal");
-  const [lastOutput, setLastOutput] = useState("");
+  const [outputText, setOutputText] = useState("");
   const [sug, setSug] = useState<{ items: string[]; index: number; left: number; top: number; from: number } | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -318,6 +339,24 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
   const print = useCallback((lines: TermLine[]) => {
     setTermLines((prev) => [...prev, ...lines]);
   }, []);
+
+  /** Output tab = the program's own output, taken from the terminal transcript
+   *  (drops shell comments, sys/debug lines and the exit note). */
+  const refreshOutput = useCallback(() => {
+    setOutputText(
+      termLines
+        .filter((l) => l.kind === "out")
+        .map((l) => l.text)
+        .join("\n")
+        .replace(/[ \t]+$/gm, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim(),
+    );
+  }, [termLines]);
+
+  useEffect(() => {
+    if (!running && !awaitingInput) refreshOutput();
+  }, [termLines, running, awaitingInput, refreshOutput]);
 
   // Hydrate settings + local history + last workspace from this browser.
   useEffect(() => {
@@ -415,7 +454,6 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           const starved = (data.warnings ?? []).some((w) => w.includes(STARVED_MARKER));
           const willPause = starved && (data.errors ?? []).length === 0 && roundsRef.current < MAX_INTERACTIVE_ROUNDS;
           const fullOut = data.output ?? "";
-          setLastOutput(fullOut);
           // Show the program only up to the point where it asked for input -
           // exactly like a real interactive console that halts at ACCEPT.
           const visible = willPause && typeof data.inputStarvedAt === "number" ? fullOut.slice(0, data.inputStarvedAt) : fullOut;
@@ -1164,7 +1202,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     <div>
       <input ref={uploadRef} type="file" multiple accept=".cbl,.cob,.cobol,.cpy,.dat,.txt" onChange={onUpload} className="hidden" />
       {/* IDE window */}
-      <div className="doc-dark wb-themed overflow-hidden rounded-xl border border-slate-700 shadow-2xl">
+      <div className={`doc-dark edtheme-${settings.editorTheme} wb-themed overflow-hidden rounded-xl border border-slate-700 shadow-2xl`}>
         {/* top toolbar */}
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 wb-chrome px-3 py-2">
           <span className="mr-1 hidden items-center gap-1.5 sm:flex">
@@ -1726,10 +1764,23 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
               </div>
             </div>
             ) : (
-              <div className="max-h-[480px] min-h-[260px] flex-1 overflow-auto p-3">
-                <pre className="whitespace-pre-wrap font-mono text-slate-200" style={{ fontSize: settings.termFont }}>
-                  {lastOutput || "(no output yet - press Run to see the full program output)"}
-                </pre>
+              <div className="flex max-h-[480px] min-h-[260px] flex-1 flex-col overflow-hidden">
+                <div className="flex items-center justify-between border-b border-slate-800 px-3 py-1.5">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Program output (read-only)</span>
+                  <button
+                    type="button"
+                    onClick={refreshOutput}
+                    title="Sync with the terminal output"
+                    className="rounded border border-slate-600 px-2 py-0.5 text-[10px] font-semibold text-slate-300 transition hover:border-indigo-400 hover:text-white"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <div className="flex-1 overflow-auto p-3">
+                  <pre className="whitespace-pre-wrap font-mono text-slate-200" style={{ fontSize: settings.termFont }}>
+                    {outputText || "(no output yet - press Run, then Refresh)"}
+                  </pre>
+                </div>
               </div>
             )}
           </div>
@@ -1763,7 +1814,7 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
       {showSettings ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4" onClick={() => setShowSettings(false)}>
           <div
-            className="w-full max-w-md rounded-xl border border-slate-600 wb-themed wb-chrome p-4 text-sm shadow-2xl"
+            className="w-full max-w-md rounded-xl border border-slate-600 bg-[#0b1625] p-4 text-sm shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -1866,6 +1917,20 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
                   onChange={(e) => setSettings((s) => ({ ...s, autocomplete: e.target.checked }))}
                   className="h-4 w-4 accent-indigo-500"
                 />
+              </label>
+              <label className="flex items-center justify-between gap-3">
+                <span>Color theme</span>
+                <select
+                  value={settings.editorTheme}
+                  onChange={(e) => setSettings((s) => ({ ...s, editorTheme: e.target.value }))}
+                  className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-400"
+                >
+                  {EDITOR_THEMES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="flex items-center justify-between gap-3">
                 <span>Layout</span>

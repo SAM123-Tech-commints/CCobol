@@ -473,54 +473,10 @@ button {
   --wb-input: #ffffff;
 }
 
-/* Whole-IDE theme: the compiler simply follows the site light/dark switch. */
+/* Whole-IDE theme scope — the colour variables come from the active .edtheme-* class. */
 .wb-themed {
-  --ed-kw: #0000ff;
-  --ed-str: #a31515;
-  --ed-num: #098658;
-  --ed-lvl: #267f99;
-  --ed-cm: #008000;
-  --ed-fg: #1f2328;
-  --ed-bg: #ffffff;
-  --ed-gutter: #f6f8fa;
-  --ed-gutter-fg: #8c959f;
-  --wb-bg: #ffffff;
-  --wb-chrome: #f3f3f3;
-  --wb-side: #f6f8fa;
-  --wb-term: #ffffff;
-  --wb-text: #1f2328;
-  --wb-dim: #57606a;
-  --wb-border: #d0d7de;
-  --wb-ok: #067d17;
-  --wb-err: #cd3131;
-  --wb-prompt: #0451a5;
-  --wb-warn: #bf8803;
-  --wb-input: #ffffff;
   background: var(--wb-bg);
   color: var(--wb-text);
-}
-html.dark .wb-themed {
-  --ed-kw: #8db8ff;
-  --ed-str: #7ee7c7;
-  --ed-num: #ffd88a;
-  --ed-lvl: #d5a6ff;
-  --ed-cm: #687b94;
-  --ed-fg: #e2e8f0;
-  --ed-bg: #091524;
-  --ed-gutter: #0a1422;
-  --ed-gutter-fg: #64748b;
-  --wb-bg: #091524;
-  --wb-chrome: #0b1625;
-  --wb-side: #0a1422;
-  --wb-term: #050c17;
-  --wb-text: #e2e8f0;
-  --wb-dim: #94a3b8;
-  --wb-border: rgba(145, 167, 194, 0.14);
-  --wb-ok: #6ee7b7;
-  --wb-err: #fb7185;
-  --wb-prompt: #8db8ff;
-  --wb-warn: #fbbf24;
-  --wb-input: #1e293b;
 }
 .wb-bg {
   background: var(--wb-bg);
