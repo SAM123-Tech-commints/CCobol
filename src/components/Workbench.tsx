@@ -778,6 +778,21 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
     resetTerminal("Workspace reset - starting from a fresh Hello World.");
   };
 
+  /** Share = a self-contained link (no database needed): the whole program,
+   *  stdin and files are encoded into the ?code= parameter. */
+  const share = async () => {
+    const payload = { code: combinedCode, stdin: stdinAccRef.current, files: dataFiles, title };
+    const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    const url = `${window.location.origin}/compiler?code=${encodeURIComponent(b64)}`;
+    setShareUrl(url);
+    try {
+      await navigator.clipboard.writeText(url);
+      print([{ kind: "sys", text: "share link copied to your clipboard" }]);
+    } catch {
+      print([{ kind: "sys", text: `share link: ${url}` }]);
+    }
+  };
+
   const save = async () => {
     setSaving(true);
     setShareUrl(null);
@@ -1255,10 +1270,9 @@ export default function Workbench({ examples, initialCode, initialStdin, initial
           </button>
           <button
             type="button"
-            onClick={save}
-            disabled={saving}
-            title="Create a share link and copy it to the clipboard"
-            className="rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-400 hover:text-white disabled:opacity-50"
+            onClick={share}
+            title="Create a share link and copy it to the clipboard (works without a database)"
+            className="rounded-lg border border-emerald-500/40 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-400 hover:text-white"
           >
             Share
           </button>
