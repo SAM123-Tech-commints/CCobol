@@ -2421,7 +2421,7 @@ button {
   }
 }
 @media (max-width: 600px) {
-  .header-actions .cta {
+  .cta-label {
     display: none;
   }
   .topbar {
@@ -2434,6 +2434,19 @@ button {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+}
+@media (max-width: 1023px) {
+  .docs > .side,
+  .page.docs .side {
+    display: none;
+  }
+  .doc {
+    width: 100%;
+    max-width: 100%;
+  }
+  .docs {
+    flex-direction: column;
   }
 }
 @media (max-width: 760px) {

@@ -67,10 +67,6 @@ export default function Navbar({ active }: { active?: NavId }) {
             {label}
           </Link>
         ))}
-        <Link href="/compiler" className={`nav-compiler-mobile${active === "compiler" ? " active" : ""}`} onClick={() => setOpen(false)}>
-          <TerminalIcon width={16} height={16} />
-          Compiler
-        </Link>
       </nav>
 
       <div className="header-actions">
@@ -79,7 +75,7 @@ export default function Navbar({ active }: { active?: NavId }) {
         </button>
         <Link href="/compiler" className={active === "compiler" ? "cta active" : "cta"}>
           <TerminalIcon width={14} height={14} />
-          Compiler
+          <span className="cta-label">Compiler</span>
         </Link>
         <ThemeToggle />
         <button
