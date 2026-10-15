@@ -5,13 +5,13 @@ import { MoonIcon, SunIcon } from "@/components/icons";
 
 const KEY = "ocb-theme";
 
-/** Light/dark theme toggle. Dark (template) is the default; saved per browser. */
+/** Light/dark theme toggle. Light (new design) is the default; saved per browser. */
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setDark(localStorage.getItem(KEY) !== "light");
+    setDark(localStorage.getItem(KEY) === "dark");
     setReady(true);
   }, []);
 
