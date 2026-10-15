@@ -13,7 +13,7 @@ export default function SchoolPage() {
       <Navbar active="school" />
       <SchoolIndex />
       <footer className="site-footer">
-        <span>© 2025 OpenCOBOL Studio · Learn the language that runs the world.</span>
+        <span>© 2025 COBOL CodeLab · Learn the language that runs the world.</span>
       </footer>
     </div>
   );

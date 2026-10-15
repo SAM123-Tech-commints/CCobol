@@ -34,13 +34,13 @@ interface ChatProps {
   className?: string;
 }
 
-/** The COBOL BOT chat engine, shared by the compiler dock and the lesson launcher. */
+/** The COBOL Assist chat engine, shared by the compiler dock and the lesson launcher. */
 export function BotChat({
   code,
   context,
   title,
   quickPrompts = [],
-  placeholder = "Ask COBOL BOT anything…",
+  placeholder = "Ask COBOL Assist anything…",
   seed,
   resetSignal,
   className,
@@ -111,7 +111,7 @@ export function BotChat({
           <div className="cobolbot-hello">
             <BotAvatar size={40} />
             <div>
-              <strong>Hi, I am COBOL BOT 👋</strong>
+              <strong>Hi, I am COBOL Assist 👋</strong>
               <p>
                 {code
                   ? "I can explain your program line by line, or answer anything about it."
@@ -141,7 +141,7 @@ export function BotChat({
         {loading ? (
           <div className="cobolbot-typing">
             <BotAvatar size={22} />
-            <span>COBOL BOT is thinking…</span>
+            <span>COBOL Assist is thinking…</span>
           </div>
         ) : null}
       </div>
@@ -153,7 +153,7 @@ export function BotChat({
         }}
         className="cobolbot-inputrow"
       >
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={placeholder} aria-label="Message COBOL BOT" />
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={placeholder} aria-label="Message COBOL Assist" />
         <button type="submit" disabled={loading || !input.trim()}>
           Send
         </button>
@@ -175,7 +175,7 @@ function BotBubble({ msg }: { msg: Msg }) {
       <div className="cobolbot-row bot">
         <BotAvatar size={24} />
         <div className="cobolbot-bot-bubble">
-          <span className={`cobolbot-tag ${msg.ai ? "ai" : "builtin"}`}>{msg.ai ? "COBOL BOT · AI" : "COBOL BOT"}</span>
+          <span className={`cobolbot-tag ${msg.ai ? "ai" : "builtin"}`}>{msg.ai ? "COBOL Assist · AI" : "COBOL Assist"}</span>
           <p>{msg.text}</p>
         </div>
       </div>
@@ -186,7 +186,7 @@ function BotBubble({ msg }: { msg: Msg }) {
       <BotAvatar size={24} />
       <div className="cobolbot-bot-bubble wide">
         <span className={`cobolbot-tag ${msg.result.source === "gemini" ? "ai" : "builtin"}`}>
-          {msg.result.source === "gemini" ? "COBOL BOT · AI explanation" : "COBOL BOT explanation"}
+          {msg.result.source === "gemini" ? "COBOL Assist · AI explanation" : "COBOL Assist explanation"}
         </span>
         <p>{msg.result.overview}</p>
         <ol className="explain-lines">
@@ -204,7 +204,7 @@ function BotBubble({ msg }: { msg: Msg }) {
   );
 }
 
-/** Floating COBOL BOT for lesson pages: bottom-left launcher that minimises to a
+/** Floating COBOL Assist for lesson pages: bottom-left launcher that minimises to a
  *  pill (never disappears), plus highlight-to-ask so the student can select text
  *  and quiz the bot about it. */
 export default function CobolBot({ context, title, quickPrompts }: { context: string; title?: string; quickPrompts?: string[] }) {
@@ -251,16 +251,16 @@ export default function CobolBot({ context, title, quickPrompts }: { context: st
       {sel ? (
         <button type="button" className="cobolbot-selectask" style={{ left: sel.x, top: sel.y }} onMouseDown={(e) => e.preventDefault()} onClick={askSelection}>
           <BotIcon width={14} height={14} />
-          Ask COBOL BOT
+          Ask COBOL Assist
         </button>
       ) : null}
 
       {open ? (
-        <div className="cobolbot-panel" role="dialog" aria-label="COBOL BOT">
+        <div className="cobolbot-panel" role="dialog" aria-label="COBOL Assist">
           <div className="cobolbot-panel-head">
             <BotAvatar size={30} />
             <div className="cobolbot-panel-title">
-              <strong>COBOL BOT</strong>
+              <strong>COBOL Assist</strong>
               <small>{title ?? "Ask about this lesson"}</small>
             </div>
             <div className="cobolbot-panel-actions">
@@ -276,9 +276,9 @@ export default function CobolBot({ context, title, quickPrompts }: { context: st
         </div>
       ) : null}
 
-      <button type="button" className="cobolbot-launcher" onClick={() => { setOpen((v) => !v); setSel(null); }} aria-label="Open COBOL BOT">
+      <button type="button" className="cobolbot-launcher" onClick={() => { setOpen((v) => !v); setSel(null); }} aria-label="Open COBOL Assist">
         <BotAvatar size={34} />
-        <span>COBOL BOT</span>
+        <span>COBOL Assist</span>
         {!open ? <em className="cobolbot-launcher-dot" /> : null}
       </button>
     </>

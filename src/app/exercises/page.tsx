@@ -19,7 +19,7 @@ export default function ExercisesPage() {
         quickPrompts={["How do I start an exercise?", "Explain the PICTURE clause", "How does PERFORM UNTIL work?", "What is a group item?"]}
       />
       <footer className="site-footer">
-        <span>Ac 2025 OpenCOBOL Studio A� Learn the language that runs the world.</span>
+        <span>Ac 2025 COBOL CodeLab A� Learn the language that runs the world.</span>
       </footer>
     </div>
   );

@@ -16,20 +16,15 @@ const LINKS: { id: NavId; href: string; label: string; Icon: typeof BookIcon }[]
   { id: "cheatsheet", href: "/cheatsheet", label: "Cheat Sheet", Icon: LayersIcon },
 ];
 
-/** Template brand mark (gradient C). */
-function Logo() {
+/** COBOL CodeLab manga-fox brand mark (ported from the Figma design). */
+function MangaFox({ size = 34 }: { size?: number }) {
   return (
-    <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden>
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#6aa5ff" />
-          <stop offset="1" stopColor="#1f5fd6" />
-        </linearGradient>
-      </defs>
-      <rect width="40" height="40" rx="11" fill="url(#lg)" />
-      <path d="M25 13.5a8 8 0 1 0 0 13" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" />
-      <rect x="21" y="18.3" width="9" height="3.4" rx="1.7" fill="#bfe0ff" />
-      <circle cx="30.5" cy="10" r="2" fill="#bfe0ff" />
+    <svg className="manga-fox" width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <path className="fox-tile" d="M5 3h38v42H5z" />
+      <path className="fox-ear" d="m11 19 2-12 10 8M37 19 35 7 25 15" />
+      <path className="fox-face" d="M11 19c1 15 7 21 13 24 6-3 12-9 13-24l-13-6-13 6Z" />
+      <path className="fox-mask" d="m14 22 8 1-5 5M34 22l-8 1 5 5M20 33h8l-4 4-4-4Z" />
+      <path className="fox-code" d="m9 34-4 3 4 3M39 34l4 3-4 3" />
     </svg>
   );
 }
@@ -53,10 +48,10 @@ export default function Navbar({ active }: { active?: NavId }) {
 
   return (
     <header className="topbar">
-      <Link href="/" className="brand" onClick={() => setOpen(false)} aria-label="OpenCOBOL Studio home">
-        <Logo />
+      <Link href="/" className="brand" onClick={() => setOpen(false)} aria-label="COBOL CodeLab home">
+        <MangaFox />
         <span className="brand-text">
-          OpenCOBOL<b>Studio</b>
+          COBOL <b>CodeLab</b>
         </span>
       </Link>
 

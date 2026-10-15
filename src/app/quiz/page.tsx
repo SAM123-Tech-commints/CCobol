@@ -23,7 +23,7 @@ export default function QuizPage() {
         quickPrompts={["Quiz me on COBOL terms", "Explain a term I'm stuck on", "Difference between PIC 9 and PIC X?", "Tips to remember the divisions"]}
       />
       <footer className="site-footer">
-        <span>Ac 2025 OpenCOBOL Studio A� Learn the language that runs the world.</span>
+        <span>Ac 2025 COBOL CodeLab A� Learn the language that runs the world.</span>
       </footer>
     </div>
   );

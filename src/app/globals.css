@@ -837,6 +837,49 @@ button {
   margin-left: 3px;
   color: var(--accent);
 }
+/* COBOL CodeLab manga-fox brand mark */
+.manga-fox {
+  display: block;
+  overflow: visible;
+}
+.manga-fox .fox-tile {
+  fill: var(--heading);
+}
+html.dark .manga-fox .fox-tile,
+:root[data-theme="dark"] .manga-fox .fox-tile {
+  fill: #fff;
+}
+.manga-fox .fox-face {
+  fill: var(--panel);
+  stroke: var(--panel);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+html.dark .manga-fox .fox-face,
+:root[data-theme="dark"] .manga-fox .fox-face {
+  fill: #0e0e0e;
+  stroke: #fff;
+}
+.manga-fox .fox-ear,
+.manga-fox .fox-mask,
+.manga-fox .fox-code {
+  fill: none;
+  stroke: var(--panel);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+html.dark .manga-fox .fox-ear,
+html.dark .manga-fox .fox-mask,
+html.dark .manga-fox .fox-code,
+:root[data-theme="dark"] .manga-fox .fox-ear,
+:root[data-theme="dark"] .manga-fox .fox-mask,
+:root[data-theme="dark"] .manga-fox .fox-code {
+  stroke: #fff;
+}
+.manga-fox .fox-mask {
+  stroke: var(--heading);
+}
 .main-nav {
   display: flex;
   align-items: center;

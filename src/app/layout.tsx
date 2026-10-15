@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Learn COBOL Programming - Free Online COBOL Tutorial & Compiler",
+    default: "COBOL CodeLab - Free Online COBOL Tutorial & Compiler",
     template: "%s",
   },
   description:

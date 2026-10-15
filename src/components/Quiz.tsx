@@ -41,7 +41,7 @@ const norm = (s: string) =>
     .trim()
     .replace(/\s+/g, " ");
 
-/** Ask COBOL BOT whether a close-but-not-exact answer is acceptable
+/** Ask COBOL Assist whether a close-but-not-exact answer is acceptable
  *  (caps, spacing, spelling and small wording differences). */
 async function aiGrade(given: string, expected: string): Promise<boolean> {
   try {
@@ -203,7 +203,7 @@ export default function Quiz({ slug, defaultMode = "mc" }: { slug: string; defau
       const accepted = await aiGrade(identInput, current.data.term);
       if (accepted) {
         ok = true;
-        detail = `Accepted by COBOL BOT - the answer is ${current.data.term}.`;
+        detail = `Accepted by COBOL Assist - the answer is ${current.data.term}.`;
       }
     }
     grade(ok ? 1 : 0, ok, detail);

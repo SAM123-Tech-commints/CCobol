@@ -63,12 +63,12 @@ function localAnswer(code: string, context: string, question: string): string {
   if (code.trim()) {
     const local = explainCobolLocally(code);
     return (
-      `I'm COBOL BOT running in built-in mode (no AI key configured), so I can answer broadly.\n\n${local.overview}\n\n` +
+      `I'm COBOL Assist running in built-in mode (no AI key configured), so I can answer broadly.\n\n${local.overview}\n\n` +
       `For free-form questions like "${question}", add GEMINI_API_KEY on Vercel to switch me to full AI.`
     );
   }
   return (
-    `I'm COBOL BOT running in built-in mode (no AI key configured). I can see this lesson's topic, but free-form answers ` +
+    `I'm COBOL Assist running in built-in mode (no AI key configured). I can see this lesson's topic, but free-form answers ` +
     `need an AI key.\n\nAdd GEMINI_API_KEY on Vercel and I'll answer "${question}" with a full explanation of the lesson.`
   );
 }
@@ -127,7 +127,7 @@ async function explainWithGemini(code: string, key: string, focus?: string): Pro
 async function askWithGemini(code: string, question: string, key: string): Promise<{ source: "gemini"; answer: string } | null> {
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const prompt = [
-    "You are COBOL BOT, a friendly COBOL tutor inside an online compiler. Answer the student's question about THEIR program.",
+    "You are COBOL Assist, a friendly COBOL tutor inside an online compiler. Answer the student's question about THEIR program.",
     "Be concise and practical. Refer to line numbers when helpful. Use short code snippets where useful.",
     "If the question is not about COBOL or this program, gently steer back.",
     "",
@@ -148,7 +148,7 @@ async function askWithGemini(code: string, question: string, key: string): Promi
 async function askWithGeminiTopic(context: string, question: string, key: string): Promise<{ source: "gemini"; answer: string } | null> {
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const prompt = [
-    "You are COBOL BOT, a friendly tutor for a first-year COBOL class. A student is reading a lesson and asks a question.",
+    "You are COBOL Assist, a friendly tutor for a first-year COBOL class. A student is reading a lesson and asks a question.",
     "Answer using the lesson material below as your source of truth, but you may add helpful general COBOL context.",
     "Be concise, use plain words, and give a tiny example where it helps. If the question is off-topic, gently steer back to COBOL.",
     "",
